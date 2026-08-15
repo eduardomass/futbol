@@ -78,8 +78,19 @@ export default function Login({ onLogin }: LoginProps) {
           >
             {!supabaseConfigurado && (
               <div className="mb-5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                Falta completar <code className="font-mono">.env.local</code> con las credenciales de
-                Supabase y reiniciar <code className="font-mono">npm run dev</code>.
+                {import.meta.env.DEV ? (
+                  <>
+                    Falta completar <code className="font-mono">.env.local</code> con las credenciales
+                    de Supabase y reiniciar <code className="font-mono">npm run dev</code>.
+                  </>
+                ) : (
+                  <>
+                    Este build se compiló sin credenciales de Supabase. Hay que cargar{' '}
+                    <code className="font-mono">VITE_SUPABASE_URL</code> y{' '}
+                    <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> como variables de{' '}
+                    <strong>build</strong> en Cloudflare y volver a desplegar.
+                  </>
+                )}
               </div>
             )}
 
