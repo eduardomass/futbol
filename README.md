@@ -72,27 +72,29 @@ Los nombres exactos están en cada página de https://reactbits.dev.
 `.mcp.json` declara el servidor MCP. Para autenticarlo, dentro de Claude Code:
 ejecutar `/mcp`, elegir **supabase** → **Authenticate**.
 
-## Deploy en Cloudflare Pages
+## Deploy en Cloudflare
 
-El proyecto se conecta al repo de GitHub y despliega solo en cada `git push`.
-
-Cloudflare Dashboard → **Workers & Pages** → *Create* → pestaña **Pages** →
-**Connect to Git** → elegir `eduardomass/futbol`. Configuración del build:
+Desplegado como **Worker** (`futbol2`) con Workers Builds conectado al repo: cada
+`git push` a `main` dispara build y deploy automático.
 
 | Campo                  | Valor           |
 |------------------------|-----------------|
-| Framework preset       | Vite            |
 | Build command          | `npm run build` |
 | Build output directory | `dist`          |
 | Production branch      | `main`          |
 
-**Variables de entorno** (Settings → Environment variables, para *Production* y
-*Preview*): hay que cargar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` a mano.
-`.env.local` no se sube al repo, así que sin esto el build de Cloudflare sale sin
-credenciales y la app muestra el aviso de configuración faltante.
+**Variables de entorno** (Settings → Variables and Secrets): hay que cargar
+`VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` a mano. `.env.local` no se sube al repo,
+así que sin esto el build de Cloudflare sale sin credenciales y la app muestra el aviso
+de configuración faltante.
 
-La versión de Node la fija `.nvmrc` (22) y `public/_redirects` hace el fallback a
-`index.html` para que las rutas del cliente no den 404.
+La versión de Node la fija `.nvmrc` (22).
+
+> **No agregar `public/_redirects`.** La regla `/* /index.html 200` que se usa en
+> Cloudflare Pages es rechazada por el validador de Workers ("Infinite loop detected")
+> y rompe el deploy. Cuando se agregue un router de cliente, el fallback a `index.html`
+> se configura con `assets.not_found_handling: "single-page-application"` en
+> `wrangler.jsonc`, no con `_redirects`.
 
 ## Nota sobre seguridad
 
