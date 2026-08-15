@@ -12,10 +12,12 @@ dist
 dist-ssr
 *.local
 
-# Variables de entorno (nunca subir credenciales)
-.env
-.env.*
-!.env.example
+# Variables de entorno
+# `.env` SI se versiona: solo contiene la Project URL y la publishable key de
+# Supabase, que son publicas por diseno (viajan dentro del bundle JS del navegador).
+# Lo que protege la base es RLS. La service_role key NUNCA va en el repo.
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*

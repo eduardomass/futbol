@@ -15,15 +15,10 @@ Eso crea la tabla `usuarios`, activa RLS, inserta el primer registro
 
 ### 2. Credenciales
 
-En Supabase: **Project Settings → API**. Copiar *Project URL* y *anon public key* a
-`.env.local`:
+Ya están en `.env`, versionado en el repo. No hay que configurar nada.
 
-```
-VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
-```
-
-`.env.local` está en `.gitignore` — no se sube al repo.
+Si necesitás pisarlas localmente (por ejemplo para apuntar a otro proyecto de Supabase),
+creá un `.env.local` — Vite le da prioridad sobre `.env` y ese sí está en `.gitignore`.
 
 ### 3. Correr la app
 
@@ -83,10 +78,9 @@ Desplegado como **Worker** (`futbol2`) con Workers Builds conectado al repo: cad
 | Build output directory | `dist`          |
 | Production branch      | `main`          |
 
-**Variables de entorno** (Settings → Variables and Secrets): hay que cargar
-`VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` a mano. `.env.local` no se sube al repo,
-así que sin esto el build de Cloudflare sale sin credenciales y la app muestra el aviso
-de configuración faltante.
+**Variables de entorno**: van versionadas en `.env`, así que el build de Cloudflare las
+toma solo y no hay que configurar nada en el dashboard. Ver la sección de seguridad más
+abajo sobre por qué es seguro versionarlas.
 
 La versión de Node la fija `.nvmrc` (22).
 
@@ -97,6 +91,18 @@ La versión de Node la fija `.nvmrc` (22).
 > `wrangler.jsonc`, no con `_redirects`.
 
 ## Nota sobre seguridad
+
+### Por qué `.env` está en el repo
+
+`VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` son públicas por diseño. Vite las
+incrusta en el bundle JS que se sirve al navegador, así que cualquier visitante puede
+leerlas con F12 — no son un secreto ni pretenden serlo. Lo que protege los datos es RLS
+en la base, no la confidencialidad de esa clave.
+
+La **`service_role` key** es otra cosa: saltea RLS por completo. Nunca va en `.env`, ni
+en el repo, ni en el frontend.
+
+### Passwords en texto plano
 
 Los passwords se guardan en texto plano en la tabla `usuarios`, según el alcance
 inicial. La tabla tiene RLS activo y sin policies, así que no es legible con la anon
