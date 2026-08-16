@@ -38,19 +38,50 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
 | `npm run preview` | Sirve el build de producción      |
 | `npm run lint`    | oxlint                            |
 
+## Qué hace
+
+- **Login** de jugadores con email y clave. Los administradores entran con la tabla
+  `usuarios`. Un link directo a un partido pide login y después lleva ahí.
+- **ABM de jugadores**: alta, edición y baja. Si el jugador ya jugó, la baja lo
+  desactiva en vez de borrarlo, para no perder el historial.
+- **Partidos**: se crea la fecha (por defecto el próximo jueves), se arman dos equipos
+  de 5 sacando y poniendo jugadores, se comienza, se carga el resultado y se finaliza.
+- **Puntajes**: con el partido finalizado, cada jugador que participó puntúa a los 10
+  —él incluido— del 1 al 10 de a medio punto. Se pueden corregir después.
+- **Dashboard**: partidos ganados, promedio general y listado de partidos propios.
+- **Detalle de partido**: los dos equipos, el promedio de cada jugador esa fecha y el
+  promedio general de la fecha.
+
 ## Estructura
 
 ```
 src/
-  components/        Componentes de ReactBits (Aurora, BlurText, SpotlightCard)
+  components/        Aurora, BlurText, SpotlightCard (ReactBits) + Layout
   lib/supabase.ts    Cliente de Supabase
-  pages/Login.tsx    Pantalla de login
-  pages/Inicio.tsx   Pantalla post-login
+  lib/api.ts         Todas las llamadas RPC a la base
+  lib/session.ts     Token de sesión en localStorage
+  lib/formato.ts     Fechas, promedios y etiquetas de estado
+  pages/Login.tsx    Login
+  pages/Dashboard.tsx  Estadísticas, fechas y «Empezar fecha»
+  pages/Jugadores.tsx  ABM de jugadores
+  pages/Partido.tsx    Equipos, resultado y carga de puntajes
   types.ts           Tipos compartidos
+scripts/             Prueba end-to-end contra la base real
 supabase/migrations/ Migraciones SQL
 .claude/skills/      Skill de Claude Code para trabajar la base
 .mcp.json            Servidor MCP de Supabase
+wrangler.jsonc       Config del Worker de Cloudflare
 ```
+
+## Cómo está armado el acceso a datos
+
+Ninguna tabla es accesible desde el navegador: todas tienen RLS sin policies. Todo pasa
+por funciones `security definer` en Postgres que reciben un token de sesión y validan
+quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
+través de `src/lib/api.ts`.
+
+`npm run prueba:e2e` corre 31 aserciones contra la base real ejercitando todo el
+circuito, incluidos los casos que deben ser rechazados.
 
 ## Agregar componentes de ReactBits
 

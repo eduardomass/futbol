@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "prueba:e2e": "node scripts/prueba-e2e.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -14,7 +15,8 @@
     "motion": "^12.43.0",
     "ogl": "^1.0.11",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

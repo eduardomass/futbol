@@ -42,35 +42,59 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migración `0001_usuarios.sql` **ya aplicada** (nombre en Supabase:
-`usuarios_y_validar_login`). Tabla `usuarios`:
+Migraciones aplicadas: `0001_usuarios.sql` y `0002_jugadores_partidos_puntajes.sql`.
 
-| columna      | tipo          | notas                     |
-|--------------|---------------|---------------------------|
-| `id`         | bigint identity | PK                      |
-| `email`      | text          | `not null unique`         |
-| `password`   | text          | `not null`, texto plano   |
-| `created_at` | timestamptz   | default `now()`           |
+### Tablas
 
-RLS activado y **sin policies**, así que la anon key no puede hacer `select` directo.
-El login usa la función `public.validar_login(p_email text, p_password text)`
-(`security definer`), que devuelve `id, email` sólo si las credenciales coinciden.
-Se invoca desde `src/pages/Login.tsx` con `supabase.rpc('validar_login', {...})`.
+| tabla               | para qué                                                        |
+|---------------------|-----------------------------------------------------------------|
+| `usuarios`          | login de administrador (heredada del alcance inicial)           |
+| `jugadores`         | `id, nombre, apellido, apodo, email, clave, activo`             |
+| `sesiones`          | token uuid → `jugador_id` o `usuario_id`, vence a los 30 días   |
+| `partidos`          | `fecha`, `estado`, `goles_a`, `goles_b`                         |
+| `partido_jugadores` | 10 filas por partido, 5 con `equipo = 'A'` y 5 con `'B'`        |
+| `puntajes`          | un voto por `(partido, autor, jugador)`, escala 1–10 de a 0,5   |
 
-`get_advisors` reporta tres avisos sobre este diseño — `rls_enabled_no_policy` en
-`usuarios` y `*_security_definer_function_executable` en `validar_login`. Los tres son
-**intencionales**: la tabla no debe ser legible desde el cliente y la función es
-justamente el endpoint público de login. No "arreglarlos" agregando policies de select.
+Ciclo de vida del partido: `programado` → `en_curso` → `finalizado`. El plantel solo se
+edita en `programado`; el resultado solo en `en_curso`; los puntajes solo en
+`finalizado` y solo por quienes jugaron.
+
+### Cómo se accede
+
+**Ninguna tabla es accesible desde el cliente.** Todas tienen RLS sin policies. Todo
+pasa por funciones `security definer` que reciben `p_token uuid` y validan la sesión
+con `sesion_valida()` / `jugador_de_token()`. El frontend las llama desde
+`src/lib/api.ts`; no usar `supabase.from(...)` en ningún lado.
+
+Al agregar una función nueva hay que darle `grant execute ... to anon` (ver el bloque
+`do $blk$` al final de la migración 0002) o el frontend recibe un 404 de PostgREST.
+
+`get_advisors` reporta `rls_enabled_no_policy` y
+`*_security_definer_function_executable` para todo esto. Son **intencionales**: las
+tablas no deben ser legibles desde el cliente y las funciones son la API pública. No
+"arreglarlos" agregando policies de select.
+
+### Prueba de regresión
+
+`npm run prueba:e2e` ejerce las 22 funciones con supabase-js contra la base real
+(31 aserciones, incluidos los casos que deben fallar). Deja datos de prueba; el
+encabezado del script trae el SQL para limpiarlos.
 
 ## Deuda técnica conocida
 
-El password está en texto plano porque así se definió el alcance inicial. Si se pide
-endurecer el login, las dos opciones en orden de preferencia:
+**Passwords en texto plano** (`usuarios.password` y `jugadores.clave`), porque así se
+definió el alcance inicial. Si se pide endurecer:
 
-1. Migrar a **Supabase Auth** (`auth.users` + `signInWithPassword`) y dejar `usuarios`
-   sólo para datos de perfil, referenciando `auth.uid()`.
-2. Mantener la tabla propia pero hashear con `pgcrypto`: guardar
-   `crypt(password, gen_salt('bf'))` y comparar dentro de `validar_login` con
-   `u.password = crypt(p_password, u.password)`.
+1. Migrar a **Supabase Auth** (`auth.users` + `signInWithPassword`) y dejar `jugadores`
+   solo con datos de perfil, referenciando `auth.uid()`. Elimina de paso la tabla
+   `sesiones` y el token propio.
+2. Mantener las tablas propias pero hashear con `pgcrypto`: guardar
+   `crypt(clave, gen_salt('bf'))` y comparar con `clave = crypt(p_clave, clave)`.
 
-No hacer este cambio sin confirmarlo con el usuario: rompe el registro existente.
+No hacer el cambio sin confirmarlo: rompe los registros existentes.
+
+**El token de sesión es la única defensa.** Cualquiera con un token válido puede llamar
+a todas las funciones, incluido el ABM de jugadores y el manejo de partidos. No hay
+distinción de permisos entre un jugador común y el admin, y `iniciar_sesion` no tiene
+rate limiting contra fuerza bruta. Alcanza para un grupo de amigos; no para algo
+público.

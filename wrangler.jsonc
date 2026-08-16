@@ -1,0 +1,14 @@
+{
+  // Worker de solo assets estáticos: sirve el build de Vite.
+  //
+  // `not_found_handling: single-page-application` es lo que hace que rutas
+  // como /partido/7 devuelvan index.html en vez de un 404, para que React
+  // Router pueda resolverlas del lado del cliente. En Cloudflare Pages esto
+  // se hacía con public/_redirects, pero en Workers ese archivo se rechaza.
+  "name": "futbol2",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
