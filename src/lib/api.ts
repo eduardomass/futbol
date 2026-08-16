@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type {
+  CeldaPuntaje,
   Estadisticas,
   Jugador,
   MiPartido,
@@ -50,10 +51,16 @@ export function listarJugadores(token: string, incluirInactivos = false): Promis
   return rpc('listar_jugadores', { p_token: token, p_incluir_inactivos: incluirInactivos })
 }
 
-export function crearJugador(
-  token: string,
-  datos: { nombre: string; apellido: string; apodo: string; email: string; clave: string },
-): Promise<number> {
+export type DatosJugador = {
+  nombre: string
+  apellido: string
+  apodo: string
+  email: string
+  clave: string
+  esAdmin: boolean
+}
+
+export function crearJugador(token: string, datos: DatosJugador): Promise<number> {
   return rpc('crear_jugador', {
     p_token: token,
     p_nombre: datos.nombre,
@@ -61,13 +68,14 @@ export function crearJugador(
     p_apodo: datos.apodo,
     p_email: datos.email,
     p_clave: datos.clave,
+    p_es_admin: datos.esAdmin,
   })
 }
 
 export function actualizarJugador(
   token: string,
   id: number,
-  datos: { nombre: string; apellido: string; apodo: string; email: string; clave: string },
+  datos: DatosJugador,
 ): Promise<void> {
   return rpc('actualizar_jugador', {
     p_token: token,
@@ -78,6 +86,7 @@ export function actualizarJugador(
     p_email: datos.email,
     // vacío = no cambiar la clave
     p_clave: datos.clave || null,
+    p_es_admin: datos.esAdmin,
   })
 }
 
@@ -181,6 +190,24 @@ export function misPuntajes(
   partidoId: number,
 ): Promise<{ jugador_id: number; puntaje: number }[]> {
   return rpc('mis_puntajes', { p_token: token, p_partido_id: partidoId })
+}
+
+// ---------- grilla de puntajes (solo administradores) ----------
+
+export function matrizPuntajes(token: string, partidoId: number): Promise<CeldaPuntaje[]> {
+  return rpc('matriz_puntajes', { p_token: token, p_partido_id: partidoId })
+}
+
+export function guardarGrillaPuntajes(
+  token: string,
+  partidoId: number,
+  celdas: CeldaPuntaje[],
+): Promise<number> {
+  return rpc('guardar_grilla_puntajes', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_celdas: celdas,
+  })
 }
 
 // ---------- dashboard ----------

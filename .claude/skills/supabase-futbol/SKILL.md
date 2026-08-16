@@ -42,18 +42,37 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001_usuarios.sql` y `0002_jugadores_partidos_puntajes.sql`.
+Migraciones aplicadas: `0001` … `0004`.
+
+**La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
+scripts que borren por conteo o por rango de id.
 
 ### Tablas
 
-| tabla               | para qué                                                        |
-|---------------------|-----------------------------------------------------------------|
-| `usuarios`          | login de administrador (heredada del alcance inicial)           |
-| `jugadores`         | `id, nombre, apellido, apodo, email, clave, activo`             |
-| `sesiones`          | token uuid → `jugador_id` o `usuario_id`, vence a los 30 días   |
-| `partidos`          | `fecha`, `estado`, `goles_a`, `goles_b`                         |
-| `partido_jugadores` | 10 filas por partido, 5 con `equipo = 'A'` y 5 con `'B'`        |
-| `puntajes`          | un voto por `(partido, autor, jugador)`, escala 1–10 de a 0,5   |
+| tabla               | para qué                                                          |
+|---------------------|-------------------------------------------------------------------|
+| `usuarios`          | login de administrador (heredada del alcance inicial)             |
+| `jugadores`         | `id, nombre, apellido, apodo, email, clave, activo, es_admin`     |
+| `sesiones`          | token uuid → `jugador_id` o `usuario_id`, vence a los 30 días     |
+| `partidos`          | `fecha`, `estado`, `goles_a`, `goles_b`                           |
+| `partido_jugadores` | 10 filas por partido, 5 con `equipo = 'A'` y 5 con `'B'`          |
+| `puntajes`          | un voto por `(partido, autor, jugador)`, escala 1–10 de a 0,5     |
+
+### Administradores
+
+`jugadores.es_admin` marca a un jugador como admin. Existe porque `iniciar_sesion`
+valida contra `jugadores` antes que contra `usuarios`: quien estaba en las dos tablas
+nunca conseguía sesión de admin. Chequear siempre con `sesion_es_admin(p_token)`, que
+cubre los dos casos (jugador con el flag, o sesión de `usuarios`).
+
+Hoy el admin habilita `matriz_puntajes` y `guardar_grilla_puntajes`: ver y completar la
+planilla autor × jugador de una fecha. El resto de las funciones no distingue admin de
+jugador común.
+
+### Orden de los listados
+
+`listar_jugadores` y `plantel_partido` ordenan **por nombre**, no por apellido — es lo
+que pidió el usuario para la pantalla de armado de partidos.
 
 Ciclo de vida del partido: `programado` → `en_curso` → `finalizado`. El plantel solo se
 edita en `programado`; el resultado solo en `en_curso`; los puntajes solo en
@@ -76,9 +95,16 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 
 ### Prueba de regresión
 
-`npm run prueba:e2e` ejerce las 22 funciones con supabase-js contra la base real
-(31 aserciones, incluidos los casos que deben fallar). Deja datos de prueba; el
-encabezado del script trae el SQL para limpiarlos.
+`npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
+(38 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
+
+Dos reglas al tocar ese script, porque corre sobre datos reales:
+
+1. **Aserciones relativas, nunca absolutas.** Tomar una foto de los conteos al empezar
+   y comparar deltas. Un `count === 10` se rompe apenas el usuario carga un jugador.
+2. **Todo lo que cree tiene que llevar email `@prueba.local`**, que es el único patrón
+   que la limpieza reconoce.
 
 ## Deuda técnica conocida
 

@@ -48,6 +48,9 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
   de 5 sacando y poniendo jugadores, se comienza, se carga el resultado y se finaliza.
 - **Puntajes**: con el partido finalizado, cada jugador que participó puntúa a los 10
   —él incluido— del 1 al 10 de a medio punto. Se pueden corregir después.
+- **Grilla de administrador**: planilla autor × jugador de una fecha, editable como un
+  Excel, para completar los votos de cualquiera. Solo la ven los jugadores marcados
+  como administradores; para el resto los votos ajenos son privados.
 - **Dashboard**: partidos ganados, promedio general y listado de partidos propios.
 - **Detalle de partido**: los dos equipos, el promedio de cada jugador esa fecha y el
   promedio general de la fecha.
@@ -80,8 +83,9 @@ por funciones `security definer` en Postgres que reciben un token de sesión y v
 quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
 través de `src/lib/api.ts`.
 
-`npm run prueba:e2e` corre 31 aserciones contra la base real ejercitando todo el
-circuito, incluidos los casos que deben ser rechazados.
+`npm run prueba:e2e` corre 38 aserciones contra la base real ejercitando todo el
+circuito, incluidos los casos que deben ser rechazados. Crea sus propios datos con
+emails `@prueba.local` y los borra al terminar; nunca toca datos reales.
 
 ## Agregar componentes de ReactBits
 

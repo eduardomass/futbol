@@ -12,6 +12,14 @@ export type Jugador = {
   apodo: string | null
   email: string
   activo: boolean
+  es_admin: boolean
+}
+
+/** Una celda de la grilla de puntajes: qué puso `autor_id` sobre `jugador_id`. */
+export type CeldaPuntaje = {
+  autor_id: number
+  jugador_id: number
+  puntaje: number | null
 }
 
 export type EstadoPartido = 'programado' | 'en_curso' | 'finalizado'

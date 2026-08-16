@@ -12,6 +12,7 @@ import {
   plantelPartido,
   quitarJugadorPartido,
 } from '@/lib/api'
+import GrillaPuntajes from '@/components/GrillaPuntajes'
 import { COLOR_ESTADO, ETIQUETA_ESTADO, formatearFecha, formatearPromedio } from '@/lib/formato'
 import { nombreCorto, type Jugador, type PartidoDetalle, type PlantelItem, type Sesion } from '@/types'
 
@@ -368,6 +369,24 @@ export default function Partido({ sesion }: PartidoProps) {
               )}
             </>
           )}
+        </section>
+      )}
+
+      {/* --- Grilla completa (solo administradores) --- */}
+      {partido.estado === 'finalizado' && sesion.esAdmin && (
+        <section className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Grilla de puntajes</h2>
+            <span className="rounded border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-300">
+              administrador
+            </span>
+          </div>
+          <GrillaPuntajes
+            sesion={sesion}
+            partidoId={partidoId}
+            plantel={plantel}
+            onGuardado={() => void cargar()}
+          />
         </section>
       )}
     </div>

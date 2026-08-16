@@ -6,7 +6,14 @@ type JugadoresProps = {
   sesion: Sesion
 }
 
-const FORM_VACIO = { nombre: '', apellido: '', apodo: '', email: '', clave: '' }
+const FORM_VACIO = {
+  nombre: '',
+  apellido: '',
+  apodo: '',
+  email: '',
+  clave: '',
+  esAdmin: false,
+}
 
 export default function Jugadores({ sesion }: JugadoresProps) {
   const [jugadores, setJugadores] = useState<Jugador[]>([])
@@ -42,6 +49,7 @@ export default function Jugadores({ sesion }: JugadoresProps) {
       apodo: j.apodo ?? '',
       email: j.email,
       clave: '',
+      esAdmin: j.es_admin,
     })
     setAviso(null)
     setError(null)
@@ -139,6 +147,19 @@ export default function Jugadores({ sesion }: JugadoresProps) {
             />
           </div>
 
+          <label className="flex w-fit items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.esAdmin}
+              onChange={e => setForm({ ...form, esAdmin: e.target.checked })}
+              className="size-4 accent-emerald-500"
+            />
+            Administrador
+            <span className="text-xs text-slate-500">
+              (puede ver y editar la grilla de puntajes de todos)
+            </span>
+          </label>
+
           {error && (
             <p
               role="alert"
@@ -214,6 +235,11 @@ export default function Jugadores({ sesion }: JugadoresProps) {
                   <tr key={j.id} className="border-t border-white/5">
                     <td className="px-4 py-3 text-white">
                       {j.nombre} {j.apellido}
+                      {j.es_admin && (
+                        <span className="ml-2 rounded border border-emerald-500/40 px-1.5 py-0.5 text-xs text-emerald-300">
+                          admin
+                        </span>
+                      )}
                       {!j.activo && (
                         <span className="ml-2 rounded border border-slate-500/40 px-1.5 py-0.5 text-xs text-slate-400">
                           inactivo
