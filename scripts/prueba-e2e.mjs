@@ -66,6 +66,18 @@ try {
   })
   ok(malo.length === 0, 'clave incorrecta no devuelve sesión')
 
+  // sesion_actual: el frontend la usa al arrancar para refrescar lo guardado
+  // en localStorage, que puede tener permisos viejos o un token vencido.
+  const actual = await rpc('sesion_actual', { p_token: token })
+  ok(
+    actual.length === 1 && actual[0].es_admin === true && actual[0].jugador_id === yoId,
+    'sesion_actual devuelve los permisos frescos del token',
+  )
+  const actualMala = await rpc('sesion_actual', {
+    p_token: '00000000-0000-0000-0000-000000000000',
+  })
+  ok(actualMala.length === 0, 'sesion_actual con token inválido devuelve vacío')
+
   // Fotos del estado previo: todo lo que sigue se compara contra esto.
   const baseJugadores = (await rpc('listar_jugadores', {
     p_token: token,

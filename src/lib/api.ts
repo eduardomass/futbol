@@ -45,6 +45,27 @@ export async function cerrarSesion(token: string): Promise<void> {
   await rpc('cerrar_sesion', { p_token: token })
 }
 
+/**
+ * Vuelve a preguntarle a la base por el token guardado. Devuelve `null` si
+ * venció o ya no existe. Sirve para no quedarse con datos viejos pegados en
+ * localStorage: por ejemplo, un jugador al que recién marcaron administrador.
+ */
+export async function sesionActual(token: string): Promise<Sesion | null> {
+  const filas = await rpc<
+    { jugador_id: number | null; nombre: string; es_admin: boolean }[]
+  >('sesion_actual', { p_token: token })
+
+  const fila = filas?.[0]
+  if (!fila) return null
+
+  return {
+    token,
+    jugadorId: fila.jugador_id,
+    nombre: fila.nombre,
+    esAdmin: fila.es_admin,
+  }
+}
+
 // ---------- jugadores ----------
 
 export function listarJugadores(token: string, incluirInactivos = false): Promise<Jugador[]> {
