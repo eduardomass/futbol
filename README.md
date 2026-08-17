@@ -102,6 +102,14 @@ Los nombres exactos están en cada página de https://reactbits.dev.
 `.mcp.json` declara el servidor MCP. Para autenticarlo, dentro de Claude Code:
 ejecutar `/mcp`, elegir **supabase** → **Authenticate**.
 
+## Documentación
+
+| Archivo | Qué hay |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Guía del proyecto: stack, comandos, reglas de arquitectura y las cosas que muerden |
+| [`docs/MODELO-DE-DATOS.md`](docs/MODELO-DE-DATOS.md) | Tablas, ciclo de vida del partido y catálogo de las 28 funciones |
+| [`docs/PENDIENTES.md`](docs/PENDIENTES.md) | Temas abiertos, bugs conocidos y deuda técnica |
+
 ## Deploy en Cloudflare
 
 Desplegado como **Worker** (`futbol2`) con Workers Builds conectado al repo: cada
