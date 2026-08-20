@@ -13,6 +13,27 @@ type GrillaPuntajesProps = {
 const clave = (autorId: number, jugadorId: number) => `${autorId}-${jugadorId}`
 
 /**
+ * El orden de las columnas es una preferencia de quien carga, no un dato del
+ * partido: se guarda por partido en el navegador para no tener que reordenar
+ * cada vez que se vuelve a entrar.
+ */
+const claveOrden = (partidoId: number) => `futbol.grilla.orden.${partidoId}`
+
+function leerOrden(partidoId: number): number[] {
+  try {
+    const crudo = localStorage.getItem(claveOrden(partidoId))
+    if (!crudo) return []
+    const ids = JSON.parse(crudo)
+    return Array.isArray(ids) ? ids.filter((x): x is number => typeof x === 'number') : []
+  } catch {
+    return []
+  }
+}
+
+const mismoOrden = (a: number[], b: number[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i])
+
+/**
  * Planilla autor × jugador. Cada fila es quien opina, cada columna el jugador
  * puntuado, y la celda el puntaje. Solo la ve un administrador: para el resto,
  * los votos de los demás son privados.
@@ -29,6 +50,9 @@ export default function GrillaPuntajes({
   const [aviso, setAviso] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
+  const [orden, setOrden] = useState<number[]>(() => leerOrden(partidoId))
+  const [arrastrando, setArrastrando] = useState<number | null>(null)
+  const [sobre, setSobre] = useState<number | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -51,6 +75,53 @@ export default function GrillaPuntajes({
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  // El orden guardado puede haber quedado viejo: un jugador que salió del
+  // plantel se descarta y uno nuevo se agrega al final.
+  useEffect(() => {
+    const ids = plantel.map(p => p.jugador_id)
+    setOrden(previo => {
+      const base = previo.length > 0 ? previo : leerOrden(partidoId)
+      const vigentes = base.filter(id => ids.includes(id))
+      const siguiente = [...vigentes, ...ids.filter(id => !vigentes.includes(id))]
+      return mismoOrden(previo, siguiente) ? previo : siguiente
+    })
+  }, [plantel, partidoId])
+
+  useEffect(() => {
+    if (orden.length === 0) return
+    localStorage.setItem(claveOrden(partidoId), JSON.stringify(orden))
+  }, [orden, partidoId])
+
+  /** El plantel en el orden elegido para las columnas. */
+  const columnas = useMemo(
+    () =>
+      orden
+        .map(id => plantel.find(p => p.jugador_id === id))
+        .filter((p): p is PlantelItem => p !== undefined),
+    [orden, plantel],
+  )
+
+  const ordenOriginal = mismoOrden(
+    orden,
+    plantel.map(p => p.jugador_id),
+  )
+
+  /** Mueve una columna de una posición a otra, corriendo el resto. */
+  function moverColumna(desde: number, hasta: number) {
+    if (desde === hasta || hasta < 0 || hasta >= orden.length) return
+    setOrden(previo => {
+      const copia = [...previo]
+      const [id] = copia.splice(desde, 1)
+      copia.splice(hasta, 0, id)
+      return copia
+    })
+  }
+
+  function restablecerOrden() {
+    localStorage.removeItem(claveOrden(partidoId))
+    setOrden(plantel.map(p => p.jugador_id))
+  }
 
   const cambios = useMemo(
     () =>
@@ -113,10 +184,23 @@ export default function GrillaPuntajes({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-400">
-        Cada fila es quien opina y cada columna el jugador puntuado. Podés completar los votos de
-        cualquiera. Dejá una celda vacía para borrar ese voto.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-2xl text-sm text-slate-400">
+          Cada fila es quien opina y cada columna el jugador puntuado. Podés completar los votos de
+          cualquiera. Dejá una celda vacía para borrar ese voto.
+          <br />
+          Para cargar más cómodo, las columnas se pueden mover: arrastrá el nombre, o usá las
+          flechas ‹ › debajo de cada uno. El orden queda guardado en este navegador.
+        </p>
+        {!ordenOriginal && (
+          <button
+            onClick={restablecerOrden}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/30 hover:text-white"
+          >
+            Restablecer orden
+          </button>
+        )}
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="text-sm">
@@ -125,16 +209,54 @@ export default function GrillaPuntajes({
               <th className="sticky left-0 z-10 bg-[#0b0f1a] px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
                 Opina ↓ / Puntúa a →
               </th>
-              {plantel.map(j => (
+              {columnas.map((j, i) => (
                 <th
                   key={j.jugador_id}
-                  className="px-2 py-2 text-center text-xs font-medium text-slate-300"
-                  title={`${j.nombre} ${j.apellido}`}
+                  draggable
+                  onDragStart={() => setArrastrando(i)}
+                  onDragOver={e => {
+                    e.preventDefault()
+                    setSobre(i)
+                  }}
+                  onDragLeave={() => setSobre(s => (s === i ? null : s))}
+                  onDrop={e => {
+                    e.preventDefault()
+                    if (arrastrando !== null) moverColumna(arrastrando, i)
+                    setArrastrando(null)
+                    setSobre(null)
+                  }}
+                  onDragEnd={() => {
+                    setArrastrando(null)
+                    setSobre(null)
+                  }}
+                  className={`cursor-grab select-none px-2 py-2 text-center text-xs font-medium text-slate-300 ${
+                    arrastrando === i ? 'opacity-40' : ''
+                  } ${
+                    sobre === i && arrastrando !== null && arrastrando !== i
+                      ? 'bg-emerald-500/15'
+                      : ''
+                  }`}
+                  title={`${j.nombre} ${j.apellido} — arrastrá para mover la columna`}
                 >
-                  <span
-                    className={j.equipo === 'A' ? 'text-sky-300' : 'text-fuchsia-300'}
-                  >
+                  <span className={j.equipo === 'A' ? 'text-sky-300' : 'text-fuchsia-300'}>
                     {nombreCorto(j)}
+                  </span>
+                  <span className="mt-1 flex items-center justify-center gap-0.5">
+                    <BotonMover
+                      hacia="izquierda"
+                      jugador={nombreCorto(j)}
+                      disabled={i === 0}
+                      onClick={() => moverColumna(i, i - 1)}
+                    />
+                    <span aria-hidden className="text-[10px] leading-none text-slate-600">
+                      ⠿
+                    </span>
+                    <BotonMover
+                      hacia="derecha"
+                      jugador={nombreCorto(j)}
+                      disabled={i === columnas.length - 1}
+                      onClick={() => moverColumna(i, i + 1)}
+                    />
                   </span>
                 </th>
               ))}
@@ -158,7 +280,7 @@ export default function GrillaPuntajes({
                   </span>
                 </th>
 
-                {plantel.map(j => {
+                {columnas.map(j => {
                   const k = clave(autor.jugador_id, j.jugador_id)
                   const propio = autor.jugador_id === j.jugador_id
                   return (
@@ -197,7 +319,7 @@ export default function GrillaPuntajes({
               <th className="sticky left-0 z-10 bg-[#0b0f1a] px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
                 Promedio
               </th>
-              {plantel.map(j => (
+              {columnas.map(j => (
                 <td
                   key={j.jugador_id}
                   className="px-2 py-2 text-center font-semibold text-emerald-400"
@@ -251,5 +373,30 @@ export default function GrillaPuntajes({
         )}
       </div>
     </div>
+  )
+}
+
+/** Flechita para mover una columna sin arrastrar: sirve en teclado y en celular. */
+function BotonMover({
+  hacia,
+  jugador,
+  disabled,
+  onClick,
+}: {
+  hacia: 'izquierda' | 'derecha'
+  jugador: string
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={`Mover la columna de ${jugador} a la ${hacia}`}
+      className="rounded px-1 leading-none text-slate-500 transition hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent"
+    >
+      {hacia === 'izquierda' ? '‹' : '›'}
+    </button>
   )
 }

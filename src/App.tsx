@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import Dashboard from '@/pages/Dashboard'
+import Estadisticas from '@/pages/Estadisticas'
 import Jugadores from '@/pages/Jugadores'
 import Login from '@/pages/Login'
 import Partido from '@/pages/Partido'
@@ -69,6 +70,7 @@ export default function App() {
       <Route element={<Layout sesion={sesion} onLogout={() => setSesion(null)} />}>
         <Route path="/" element={<Dashboard sesion={sesion} />} />
         <Route path="/jugadores" element={<Jugadores sesion={sesion} />} />
+        <Route path="/estadisticas" element={<Estadisticas sesion={sesion} />} />
         <Route path="/partido/:id" element={<Partido sesion={sesion} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

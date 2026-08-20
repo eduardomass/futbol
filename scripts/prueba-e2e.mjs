@@ -84,6 +84,8 @@ try {
     p_incluir_inactivos: false,
   })).length
   const [baseStats] = await rpc('estadisticas', { p_token: token })
+  const baseTabla = await rpc('estadisticas_jugadores', { p_token: token })
+  const baseMia = baseTabla.find(f => f.jugador_id === yoId)
   console.log(`  ···  base: ${baseJugadores} jugadores, ${baseStats.partidos_jugados} partidos jugados`)
 
   // ============ ABM de jugadores ============
@@ -322,6 +324,35 @@ try {
   ok(
     stats.partidos_ganados === baseStats.partidos_ganados + 1,
     `partidos_ganados suma 1: jugué en A y ganó 4-2 (${baseStats.partidos_ganados} → ${stats.partidos_ganados})`,
+  )
+
+  // La tabla del módulo de estadísticas: mi fila tiene que moverse igual que
+  // `estadisticas`, y los 9 jugadores de prueba tienen que aparecer.
+  const tabla = await rpc('estadisticas_jugadores', { p_token: token })
+  const mia = tabla.find(f => f.jugador_id === yoId)
+  ok(
+    mia?.partidos_jugados === baseMia.partidos_jugados + 1 &&
+      mia?.partidos_ganados === baseMia.partidos_ganados + 1,
+    `estadisticas_jugadores suma la fecha nueva a mi fila (${baseMia.partidos_ganados} → ${mia?.partidos_ganados} ganados)`,
+  )
+  ok(
+    mia?.partidos_jugados ===
+      mia?.partidos_ganados + mia?.partidos_empatados + mia?.partidos_perdidos,
+    'jugados = ganados + empatados + perdidos',
+  )
+  ok(
+    tabla.length >= baseTabla.length + 9,
+    `la tabla incluye los 9 jugadores de prueba (${baseTabla.length} → ${tabla.length})`,
+  )
+  const tablaComun = await rpc('estadisticas_jugadores', { p_token: tokenComun })
+  ok(
+    tablaComun.length === tabla.length,
+    'un jugador común también ve la tabla de estadísticas del grupo',
+  )
+  await debeFallar(
+    'estadisticas_jugadores',
+    { p_token: '00000000-0000-0000-0000-000000000000' },
+    'estadisticas_jugadores con token inválido',
   )
 
   const mp = await rpc('mis_partidos', { p_token: token })

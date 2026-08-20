@@ -63,6 +63,20 @@ export type Estadisticas = {
   promedio_general: number | null
 }
 
+/** Una fila del módulo de estadísticas: el historial completo de un jugador. */
+export type EstadisticaJugador = {
+  jugador_id: number
+  nombre: string
+  apellido: string
+  apodo: string | null
+  activo: boolean
+  partidos_jugados: number
+  partidos_ganados: number
+  partidos_empatados: number
+  partidos_perdidos: number
+  promedio_general: number | null
+}
+
 export type MiPartido = {
   id: number
   fecha: string

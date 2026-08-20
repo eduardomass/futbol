@@ -49,9 +49,13 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
 - **Puntajes**: con el partido finalizado, cada jugador que participó puntúa a los 10
   —él incluido— del 1 al 10 de a medio punto. Se pueden corregir después.
 - **Grilla de administrador**: planilla autor × jugador de una fecha, editable como un
-  Excel, para completar los votos de cualquiera. Solo la ven los jugadores marcados
-  como administradores; para el resto los votos ajenos son privados.
+  Excel, para completar los votos de cualquiera. Las columnas se pueden reordenar
+  arrastrándolas, para cargar en el mismo orden que la planilla de papel. Solo la ven
+  los jugadores marcados como administradores; para el resto los votos ajenos son
+  privados.
 - **Dashboard**: partidos ganados, promedio general y listado de partidos propios.
+- **Estadísticas**: tabla del grupo con partidos jugados, ganados, empatados y
+  perdidos de cada jugador, más su promedio histórico. Ordenable por cualquier columna.
 - **Detalle de partido**: los dos equipos, el promedio de cada jugador esa fecha y el
   promedio general de la fecha.
 
@@ -68,6 +72,7 @@ src/
   pages/Dashboard.tsx  Estadísticas, fechas y «Empezar fecha»
   pages/Jugadores.tsx  ABM de jugadores
   pages/Partido.tsx    Equipos, resultado y carga de puntajes
+  pages/Estadisticas.tsx  Tabla de jugados/ganados/empatados/perdidos por jugador
   types.ts           Tipos compartidos
 scripts/             Prueba end-to-end contra la base real
 supabase/migrations/ Migraciones SQL
@@ -83,7 +88,7 @@ por funciones `security definer` en Postgres que reciben un token de sesión y v
 quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
 través de `src/lib/api.ts`.
 
-`npm run prueba:e2e` corre 38 aserciones contra la base real ejercitando todo el
+`npm run prueba:e2e` corre 47 aserciones contra la base real ejercitando todo el
 circuito, incluidos los casos que deben ser rechazados. Crea sus propios datos con
 emails `@prueba.local` y los borra al terminar; nunca toca datos reales.
 

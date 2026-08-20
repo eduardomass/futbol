@@ -147,7 +147,8 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 
 | función | qué hace |
 |---|---|
-| `estadisticas(p_token)` | `partidos_jugados, ganados, empatados, perdidos, promedio_general`. |
+| `estadisticas(p_token)` | `partidos_jugados, ganados, empatados, perdidos, promedio_general` del jugador de la sesión. Una sesión de admin puro devuelve todo en cero. |
+| `estadisticas_jugadores(p_token)` | Una fila por jugador con los mismos números. Cuenta solo partidos `finalizado` con resultado cargado. Aparecen los activos más los inactivos con historial. La ve cualquier sesión válida, no solo el admin. |
 | `mis_partidos(p_token)` | Los partidos propios con equipo, resultado y promedio personal de esa fecha. |
 
 ### Mantenimiento
@@ -168,4 +169,5 @@ celda vacía no es un cero: no hay fila, así que no entra en el promedio ni en 
 | `obtener_partido.promedio_fecha` | Todos los votos del partido. |
 | `mis_partidos.mi_promedio` | Lo que recibió el jugador en esa fecha. |
 | `estadisticas.promedio_general` | Todos los votos que recibió el jugador en toda su historia. |
+| `estadisticas_jugadores.promedio_general` | Lo mismo, para cada jugador del grupo. |
 | Grilla (fila «Promedio») | Se calcula en el navegador sobre las celdas no vacías de la columna. |

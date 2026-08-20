@@ -105,7 +105,10 @@ login) más `motion`. Si molesta el tiempo de carga, la salida es cargar `Aurora
 ## Ideas pedidas o insinuadas, no implementadas
 
 - **Navegación tipo Excel en la grilla**: moverse con Tab y flechas, y algo tipo «copiar
-  la fila de arriba». Se ofreció y no se cerró.
+  la fila de arriba». Se ofreció y no se cerró. Ya se implementó lo de **reordenar las
+  columnas** (arrastrar el nombre o las flechas ‹ ›, el orden se guarda en
+  `localStorage` bajo `futbol.grilla.orden.<partidoId>`); las filas siguen ordenadas
+  por equipo y nombre.
 - **Equipos automáticos**: hoy la asignación al equipo A o B es manual. Se descartó
   armarlos al azar, pero podría volver como opción.
 - **Puntajes propios del jugador**: cada uno carga los suyos por su link. Funciona, pero

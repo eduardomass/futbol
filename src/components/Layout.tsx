@@ -11,6 +11,7 @@ type LayoutProps = {
 const enlaces = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/jugadores', label: 'Jugadores', end: false },
+  { to: '/estadisticas', label: 'Estadísticas', end: false },
 ]
 
 export default function Layout({ sesion, onLogout }: LayoutProps) {

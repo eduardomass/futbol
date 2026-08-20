@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type {
   CeldaPuntaje,
   Estadisticas,
+  EstadisticaJugador,
   Jugador,
   MiPartido,
   PartidoDetalle,
@@ -244,6 +245,14 @@ export async function estadisticas(token: string): Promise<Estadisticas> {
       promedio_general: null,
     }
   )
+}
+
+/**
+ * Tabla del grupo: cada jugador con jugados, ganados, empatados y perdidos.
+ * Cuenta solo partidos finalizados con resultado cargado.
+ */
+export function estadisticasJugadores(token: string): Promise<EstadisticaJugador[]> {
+  return rpc('estadisticas_jugadores', { p_token: token })
 }
 
 export function misPartidos(token: string): Promise<MiPartido[]> {

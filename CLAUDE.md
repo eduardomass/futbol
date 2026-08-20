@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 40 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 47 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -60,7 +60,7 @@ quien estaba en las dos tablas nunca conseguía sesión de admin.
 
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0005_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0006_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,
