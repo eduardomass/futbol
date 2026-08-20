@@ -7,12 +7,35 @@ type EstadisticasProps = {
   sesion: Sesion
 }
 
-/** Las columnas ordenables y cómo sacar el número de cada fila. */
+/** Puntos del torneo: ganar vale 3, empatar 1, perder 0. */
+const PUNTOS_GANADO = 3
+const PUNTOS_EMPATADO = 1
+
+/**
+ * Cuántos partidos de «crédito» al promedio del grupo se le suman a cada
+ * jugador en el KPI ajustado. Con K = 5, alguien con un solo partido pesa
+ * 1/6 de su propio rendimiento y 5/6 del promedio general: así el que ganó
+ * su único partido no queda primero con una efectividad del 100%.
+ */
+const K_POR_DEFECTO = 5
+const CLAVE_K = 'futbol.estadisticas.k'
+
+/** Una fila del ranking: lo que vino de la base más lo derivado. */
+type FilaRanking = EstadisticaJugador & {
+  puntos: number
+  /** Puntos por partido. null si todavía no jugó. */
+  ppg: number | null
+  /** PPG corregido con el promedio del grupo. null si todavía no jugó. */
+  kpi: number | null
+}
+
 const COLUMNAS = [
   { clave: 'partidos_jugados', titulo: 'Partidos' },
   { clave: 'partidos_ganados', titulo: 'Ganados' },
   { clave: 'partidos_empatados', titulo: 'Empatados' },
   { clave: 'partidos_perdidos', titulo: 'Perdidos' },
+  { clave: 'puntos', titulo: 'Puntos' },
+  { clave: 'kpi', titulo: 'KPI ajustado' },
   { clave: 'promedio_general', titulo: 'Promedio' },
 ] as const
 
@@ -27,8 +50,18 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
   const [filas, setFilas] = useState<EstadisticaJugador[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [orden, setOrden] = useState<ClaveOrden>('partidos_ganados')
+  const [orden, setOrden] = useState<ClaveOrden>('kpi')
   const [descendente, setDescendente] = useState(true)
+  const [kTexto, setKTexto] = useState(
+    () => localStorage.getItem(CLAVE_K) ?? String(K_POR_DEFECTO),
+  )
+
+  // Vacío o basura cuentan como 0: sin corrección, el KPI es el PPG crudo.
+  const k = Math.max(0, Number(kTexto) || 0)
+
+  useEffect(() => {
+    localStorage.setItem(CLAVE_K, String(k))
+  }, [k])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -46,13 +79,53 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
     void cargar()
   }, [cargar])
 
+  const { ranking, ppgGrupo, totales } = useMemo(() => {
+    const puntosDe = (f: EstadisticaJugador) =>
+      f.partidos_ganados * PUNTOS_GANADO + f.partidos_empatados * PUNTOS_EMPATADO
+
+    const totalJugados = filas.reduce((t, f) => t + f.partidos_jugados, 0)
+    const totalPuntos = filas.reduce((t, f) => t + puntosDe(f), 0)
+
+    // El PPG del grupo sale de los totales, no del promedio de los promedios:
+    // así cada partido pesa igual, y no más el de quien jugó menos veces.
+    const ppgGrupo = totalJugados > 0 ? totalPuntos / totalJugados : null
+
+    const ranking: FilaRanking[] = filas.map(f => {
+      const puntos = puntosDe(f)
+      const pj = f.partidos_jugados
+      const ppg = pj > 0 ? puntos / pj : null
+      return {
+        ...f,
+        puntos,
+        ppg,
+        kpi:
+          ppg === null || ppgGrupo === null
+            ? null
+            : (pj / (pj + k)) * ppg + (k / (pj + k)) * ppgGrupo,
+      }
+    })
+
+    return {
+      ranking,
+      ppgGrupo,
+      totales: {
+        conPartidos: filas.filter(f => f.partidos_jugados > 0).length,
+        jugados: totalJugados,
+        puntos: totalPuntos,
+        ganados: filas.reduce((t, f) => t + f.partidos_ganados, 0),
+        empatados: filas.reduce((t, f) => t + f.partidos_empatados, 0),
+        perdidos: filas.reduce((t, f) => t + f.partidos_perdidos, 0),
+      },
+    }
+  }, [filas, k])
+
   const ordenadas = useMemo(() => {
     const signo = descendente ? -1 : 1
-    return [...filas].sort((a, b) => {
+    return [...ranking].sort((a, b) => {
       if (orden === 'nombre') {
         return signo * nombreCorto(a).localeCompare(nombreCorto(b), 'es')
       }
-      // Sin promedio va siempre al final, ordene como ordene.
+      // Sin dato (nunca jugó, o nadie lo puntuó) va al final, ordene como ordene.
       const va = a[orden]
       const vb = b[orden]
       if (va === null) return 1
@@ -60,18 +133,7 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
       if (va !== vb) return signo * (Number(va) - Number(vb))
       return nombreCorto(a).localeCompare(nombreCorto(b), 'es')
     })
-  }, [filas, orden, descendente])
-
-  const totales = useMemo(
-    () => ({
-      jugadores: filas.filter(f => f.partidos_jugados > 0).length,
-      jugados: filas.reduce((t, f) => t + f.partidos_jugados, 0),
-      ganados: filas.reduce((t, f) => t + f.partidos_ganados, 0),
-      empatados: filas.reduce((t, f) => t + f.partidos_empatados, 0),
-      perdidos: filas.reduce((t, f) => t + f.partidos_perdidos, 0),
-    }),
-    [filas],
-  )
+  }, [ranking, orden, descendente])
 
   function ordenarPor(clave: ClaveOrden) {
     if (clave === orden) {
@@ -112,9 +174,38 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Tarjeta titulo="Jugadores" valor={filas.length} />
-            <Tarjeta titulo="Con fechas jugadas" valor={totales.jugadores} />
-            <Tarjeta titulo="Victorias cargadas" valor={totales.ganados} />
-            <Tarjeta titulo="Empates / derrotas" valor={`${totales.empatados} / ${totales.perdidos}`} />
+            <Tarjeta titulo="Con fechas jugadas" valor={totales.conPartidos} />
+            <Tarjeta titulo="PPG del grupo" valor={formatearPromedio(ppgGrupo)} />
+            <Tarjeta
+              titulo="Empates / derrotas"
+              valor={`${totales.empatados} / ${totales.perdidos}`}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-4">
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <span className="font-medium">K</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={kTexto}
+                onChange={e => setKTexto(e.target.value)}
+                className="w-20 rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-center text-white outline-none transition focus:border-emerald-400/60"
+              />
+            </label>
+            <p className="text-sm text-slate-400">
+              Partidos de «crédito» que se le suman a cada jugador al promedio del grupo. Más
+              alto = más castigo a quien jugó pocas fechas. Con 0, el KPI es el PPG crudo.
+            </p>
+            {k !== K_POR_DEFECTO && (
+              <button
+                onClick={() => setKTexto(String(K_POR_DEFECTO))}
+                className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 transition hover:border-white/30 hover:text-white"
+              >
+                Volver a {K_POR_DEFECTO}
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-white/10">
@@ -174,6 +265,19 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
                     <td className="px-3 py-2.5 text-center font-mono text-red-300">
                       {f.partidos_perdidos}
                     </td>
+                    <td className="px-3 py-2.5 text-center font-mono font-semibold text-white">
+                      {f.puntos}
+                    </td>
+                    <td
+                      className="px-3 py-2.5 text-center font-mono font-semibold text-emerald-300"
+                      title={
+                        f.ppg === null
+                          ? 'Todavía no jugó ninguna fecha finalizada'
+                          : `PPG propio ${f.ppg.toFixed(2)} · PPG del grupo ${formatearPromedio(ppgGrupo)} · K ${k}`
+                      }
+                    >
+                      {formatearPromedio(f.kpi)}
+                    </td>
                     <td className="px-3 py-2.5 text-center font-mono text-slate-300">
                       {formatearPromedio(f.promedio_general)}
                     </td>
@@ -188,17 +292,34 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
                   <td className="px-3 py-2 text-center font-mono">{totales.ganados}</td>
                   <td className="px-3 py-2 text-center font-mono">{totales.empatados}</td>
                   <td className="px-3 py-2 text-center font-mono">{totales.perdidos}</td>
+                  <td className="px-3 py-2 text-center font-mono">{totales.puntos}</td>
+                  <td className="px-3 py-2 text-center font-mono" title="PPG del grupo">
+                    {formatearPromedio(ppgGrupo)}
+                  </td>
                   <td />
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          <p className="text-xs text-slate-500">
-            Los empates cuentan para los dos equipos, así que en una fecha empatada suman 10
-            empates. El promedio es el de todos los puntajes que recibió el jugador en su
-            historia.
-          </p>
+          <div className="space-y-1 text-xs text-slate-500">
+            <p>
+              <strong className="text-slate-400">Puntos</strong>: ganado {PUNTOS_GANADO}, empatado{' '}
+              {PUNTOS_EMPATADO}, perdido 0. Los empates cuentan para los dos equipos, así que una
+              fecha empatada reparte {PUNTOS_EMPATADO * 10} puntos.
+            </p>
+            <p>
+              <strong className="text-slate-400">KPI ajustado</strong> = (PJ / (PJ + K)) × PPG + (K
+              / (PJ + K)) × PPG del grupo, con PPG = Puntos / PJ. Corre el rendimiento de cada uno
+              hacia el promedio del grupo en proporción a lo poco que jugó, así una efectividad del
+              100% en un solo partido no gana el ranking. Con muchas fechas encima, el KPI tiende
+              al PPG propio.
+            </p>
+            <p>
+              <strong className="text-slate-400">Promedio</strong>: el de los puntajes que recibió
+              el jugador en su historia, aparte del resultado de los partidos.
+            </p>
+          </div>
         </>
       )}
     </div>
