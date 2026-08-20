@@ -94,6 +94,11 @@ programado ──comenzar_partido──> en_curso ──finalizar_partido──>
 Las tres restricciones las hace cumplir Postgres, no la pantalla: no se pueden saltear
 desde la consola del navegador.
 
+Hay un cuarto momento, el **cierre**: cuando se crea un partido con fecha posterior,
+`guardar_puntajes` deja de aceptar cargas para el anterior. La planilla de una fecha se
+cierra sola al abrirse la siguiente. La grilla del admin sigue abierta, que es la vía
+para corregir una carga vieja.
+
 ## Catálogo de funciones
 
 Todas son `security definer` con `grant execute to anon` (excepto donde se aclara), y
@@ -114,10 +119,11 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 
 | función | qué hace |
 |---|---|
-| `listar_jugadores(p_token, p_incluir_inactivos)` | Ordenado **por nombre**. Devuelve `es_admin` y `activo`. |
-| `crear_jugador(p_token, p_nombre, p_apellido, p_apodo, p_email, p_clave, p_es_admin)` | Devuelve el id. Error legible si el email está repetido. |
-| `actualizar_jugador(p_token, p_id, …, p_clave, p_es_admin)` | `p_clave` y `p_es_admin` en null dejan el valor actual. |
-| `eliminar_jugador(p_token, p_id)` | Devuelve `'eliminado'` o `'desactivado'` — lo segundo si el jugador ya participó de algún partido. |
+| `listar_jugadores(p_token, p_incluir_inactivos)` | Ordenado **por nombre**. Devuelve `es_admin` y `activo`. Abierta a cualquier sesión: se necesita para armar el plantel. |
+| `mi_jugador(p_token)` | La fila del jugador de la sesión. Es lo que ve un jugador común en `/jugadores`. Cero filas si el token es de una sesión de `usuarios`. |
+| `crear_jugador(p_token, p_nombre, p_apellido, p_apodo, p_email, p_clave, p_es_admin)` | **Solo admin.** Devuelve el id. Error legible si el email está repetido. |
+| `actualizar_jugador(p_token, p_id, …, p_clave, p_es_admin)` | `p_clave` y `p_es_admin` en null dejan el valor actual. Un jugador común solo puede editar su propia fila, y su `p_es_admin` se ignora. |
+| `eliminar_jugador(p_token, p_id)` | **Solo admin.** Devuelve `'eliminado'` o `'desactivado'` — lo segundo si el jugador ya participó de algún partido. |
 
 ### Partidos
 
@@ -126,7 +132,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `proximo_jueves()` | Si hoy es jueves devuelve hoy; si no, el jueves siguiente. Único sin token. |
 | `crear_partido(p_token, p_fecha)` | `p_fecha` en null usa `proximo_jueves()`. |
 | `listar_partidos(p_token)` | Todas las fechas con cantidad de jugadores y promedio. |
-| `obtener_partido(p_token, p_partido_id)` | Detalle + `promedio_fecha`, `soy_participante`, `ya_puntue`. |
+| `obtener_partido(p_token, p_partido_id)` | Detalle + `promedio_fecha`, `soy_participante`, `ya_puntue` y `puntajes_cerrados` (true si existe algún partido con fecha posterior). |
 | `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio y cantidad de votos. Ordenado por equipo y después **por nombre**. |
 | `agregar_jugador_partido(…, p_equipo)` | Solo en `programado`; rechaza el 6º del equipo y los repetidos. |
 | `quitar_jugador_partido(…)` | Solo en `programado`. |
@@ -138,7 +144,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 
 | función | qué hace |
 |---|---|
-| `guardar_puntajes(p_token, p_partido_id, p_puntajes)` | `p_puntajes` es `[{jugador_id, puntaje}]`. Exige el partido finalizado, que el autor haya jugado, y los 10 jugadores. Reenviar corrige, no duplica. |
+| `guardar_puntajes(p_token, p_partido_id, p_puntajes)` | `p_puntajes` es `[{jugador_id, puntaje}]`. Exige el partido finalizado, que el autor haya jugado, y los 10 jugadores. Reenviar corrige, no duplica. **Se cierra** cuando ya existe un partido con fecha posterior. |
 | `mis_puntajes(p_token, p_partido_id)` | Los votos propios, para precargar el formulario. |
 | `matriz_puntajes(p_token, p_partido_id)` | **Solo admin.** Todos los votos del partido: `autor_id, jugador_id, puntaje`. |
 | `guardar_grilla_puntajes(p_token, p_partido_id, p_celdas)` | **Solo admin.** `[{autor_id, jugador_id, puntaje}]`; `puntaje` en null borra la celda. Acepta cargas parciales. |

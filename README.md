@@ -42,12 +42,16 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
 
 - **Login** de jugadores con email y clave. Los administradores entran con la tabla
   `usuarios`. Un link directo a un partido pide login y después lleva ahí.
-- **ABM de jugadores**: alta, edición y baja. Si el jugador ya jugó, la baja lo
-  desactiva en vez de borrarlo, para no perder el historial.
+- **ABM de jugadores**: alta, edición y baja, solo para administradores. Si el jugador
+  ya jugó, la baja lo desactiva en vez de borrarlo, para no perder el historial. Un
+  jugador común ve en esa pantalla únicamente su propia ficha, y puede cambiar sus datos
+  y su clave.
 - **Partidos**: se crea la fecha (por defecto el próximo jueves), se arman dos equipos
   de 5 sacando y poniendo jugadores, se comienza, se carga el resultado y se finaliza.
 - **Puntajes**: con el partido finalizado, cada jugador que participó puntúa a los 10
-  —él incluido— del 1 al 10 de a medio punto. Se pueden corregir después.
+  —él incluido— del 1 al 10 de a medio punto. Se pueden corregir hasta que se cargue una
+  fecha posterior: ahí la planilla de esa fecha se cierra y solo un administrador puede
+  retocarla desde la grilla.
 - **Grilla de administrador**: planilla autor × jugador de una fecha, editable como un
   Excel, para completar los votos de cualquiera. Las columnas se pueden reordenar
   arrastrándolas, para cargar en el mismo orden que la planilla de papel. Solo la ven
@@ -55,7 +59,12 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
   privados.
 - **Dashboard**: partidos ganados, promedio general y listado de partidos propios.
 - **Estadísticas**: tabla del grupo con partidos jugados, ganados, empatados y
-  perdidos de cada jugador, más su promedio histórico. Ordenable por cualquier columna.
+  perdidos de cada jugador, sus puntos (3 por ganado, 1 por empatado) y su promedio
+  histórico de puntajes. Ordenable por cualquier columna. Incluye un **KPI ajustado**,
+  que corre los puntos por partido de cada uno hacia el promedio del grupo según lo poco
+  que jugó, para que una efectividad del 100% en un solo partido no gane el ranking:
+  `KPI = (PJ / (PJ + K)) × PPG + (K / (PJ + K)) × PPG_grupo`, con K configurable desde
+  la misma pantalla (5 por defecto).
 - **Detalle de partido**: los dos equipos, el promedio de cada jugador esa fecha y el
   promedio general de la fecha.
 
@@ -88,7 +97,7 @@ por funciones `security definer` en Postgres que reciben un token de sesión y v
 quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
 través de `src/lib/api.ts`.
 
-`npm run prueba:e2e` corre 47 aserciones contra la base real ejercitando todo el
+`npm run prueba:e2e` corre 58 aserciones contra la base real ejercitando todo el
 circuito, incluidos los casos que deben ser rechazados. Crea sus propios datos con
 emails `@prueba.local` y los borra al terminar; nunca toca datos reales.
 

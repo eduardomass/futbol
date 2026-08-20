@@ -1,6 +1,6 @@
 # Pendientes y temas abiertos
 
-Estado al 17/08/2026.
+Estado al 20/08/2026.
 
 ## Abierto sin resolver
 
@@ -79,10 +79,12 @@ y resetear las claves de los 15 jugadores.
 
 ### El token de sesión es la única defensa
 
-Cualquiera con un token válido puede llamar a casi todas las funciones: crear y borrar
-jugadores, crear fechas, cargar resultados. La única distinción de permisos que existe
-es `es_admin`, y solo la usan `matriz_puntajes`, `guardar_grilla_puntajes` y
-`limpiar_datos_prueba`.
+El ABM de jugadores ya pide admin (migración `0007`): `crear_jugador` y
+`eliminar_jugador` son solo de admin, `actualizar_jugador` deja editar únicamente la
+fila propia, y el flag `es_admin` se ignora si no lo manda un admin.
+
+Lo que sigue abierto: cualquiera con un token válido puede crear fechas, armar planteles,
+cargar resultados y finalizar partidos. Ahí no hay distinción de permisos.
 
 Además `iniciar_sesion` no tiene rate limiting: se puede hacer fuerza bruta sobre las
 claves sin ningún freno.

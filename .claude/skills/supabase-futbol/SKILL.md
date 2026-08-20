@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0006`.
+Migraciones aplicadas: `0001` … `0007`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -65,9 +65,22 @@ valida contra `jugadores` antes que contra `usuarios`: quien estaba en las dos t
 nunca conseguía sesión de admin. Chequear siempre con `sesion_es_admin(p_token)`, que
 cubre los dos casos (jugador con el flag, o sesión de `usuarios`).
 
-Hoy el admin habilita `matriz_puntajes` y `guardar_grilla_puntajes`: ver y completar la
-planilla autor × jugador de una fecha. El resto de las funciones no distingue admin de
-jugador común.
+El admin habilita `matriz_puntajes` y `guardar_grilla_puntajes` (la planilla autor ×
+jugador de una fecha) y, desde la migración `0007`, el ABM de jugadores:
+
+- `crear_jugador` y `eliminar_jugador`: solo admin.
+- `actualizar_jugador`: un jugador común solo puede editar su propia fila, y el flag
+  `es_admin` se ignora si no lo manda un admin (antes cualquiera se marcaba admin a sí
+  mismo y se quedaba con la grilla de todos).
+- `mi_jugador(p_token)`: la fila propia, para la pantalla del jugador común.
+- `listar_jugadores` sigue abierta a todos: se necesita para armar el plantel.
+
+### Cierre de puntajes
+
+`guardar_puntajes` rechaza la carga si existe algún partido con fecha posterior — la
+planilla de una fecha se cierra cuando se carga la siguiente. `obtener_partido` devuelve
+`puntajes_cerrados` para que la pantalla lo avise. `guardar_grilla_puntajes` **no** tiene
+ese límite: es la vía del admin para corregir una fecha vieja.
 
 ### Orden de los listados
 
@@ -96,7 +109,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(47 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(58 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:
@@ -104,7 +117,11 @@ Dos reglas al tocar ese script, porque corre sobre datos reales:
 1. **Aserciones relativas, nunca absolutas.** Tomar una foto de los conteos al empezar
    y comparar deltas. Un `count === 10` se rompe apenas el usuario carga un jugador.
 2. **Todo lo que cree tiene que llevar email `@prueba.local`**, que es el único patrón
-   que la limpieza reconoce.
+   que la limpieza reconoce. Un partido se borra si participó algún jugador de prueba:
+   un partido vacío queda como basura en los datos reales.
+3. El partido de prueba tiene que ser el de **fecha más alta** o `guardar_puntajes` lo
+   rechaza por el cierre de puntajes. El script lo resuelve mirando `listar_partidos`
+   antes de crearlo.
 
 ## Deuda técnica conocida
 
@@ -119,8 +136,8 @@ definió el alcance inicial. Si se pide endurecer:
 
 No hacer el cambio sin confirmarlo: rompe los registros existentes.
 
-**El token de sesión es la única defensa.** Cualquiera con un token válido puede llamar
-a todas las funciones, incluido el ABM de jugadores y el manejo de partidos. No hay
-distinción de permisos entre un jugador común y el admin, y `iniciar_sesion` no tiene
-rate limiting contra fuerza bruta. Alcanza para un grupo de amigos; no para algo
-público.
+**El token de sesión es la única defensa.** El ABM de jugadores y la grilla ya piden
+admin (migraciones `0003` y `0007`), pero el manejo de partidos —crear fechas, armar
+planteles, cargar resultados— lo puede hacer cualquier jugador con token válido, y
+`iniciar_sesion` no tiene rate limiting contra fuerza bruta. Alcanza para un grupo de
+amigos; no para algo público.

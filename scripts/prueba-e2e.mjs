@@ -34,6 +34,12 @@ async function rpc(fn, args) {
   return data
 }
 
+function sumarDias(fecha, dias) {
+  const d = new Date(fecha + 'T00:00:00')
+  d.setDate(d.getDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
+
 async function debeFallar(fn, args, etiqueta) {
   const { error } = await sb.rpc(fn, args)
   ok(!!error, `${etiqueta} → rechazado: ${error?.message ?? 'NO FALLÓ'}`)
@@ -160,9 +166,25 @@ try {
   const jueves = await rpc('proximo_jueves')
   ok(new Date(jueves + 'T00:00:00').getDay() === 4, `proximo_jueves() cae jueves (${jueves})`)
 
-  partidoId = await rpc('crear_partido', { p_token: token, p_fecha: null })
+  // `guardar_puntajes` se cierra cuando hay una fecha posterior cargada, así
+  // que el partido de prueba tiene que ser el último. El próximo jueves suele
+  // alcanzar; si la base ya tiene algo más adelante, se crea después de eso.
+  const fechasPrevias = await rpc('listar_partidos', { p_token: token })
+  const ultimaFecha = fechasPrevias.reduce((m, p) => (p.fecha > m ? p.fecha : m), '')
+  const usarDefecto = ultimaFecha <= jueves
+
+  partidoId = await rpc('crear_partido', {
+    p_token: token,
+    p_fecha: usarDefecto ? null : sumarDias(ultimaFecha, 7),
+  })
   const [det0] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
-  ok(det0.fecha === jueves, 'crear_partido sin fecha usa el próximo jueves')
+  if (usarDefecto) {
+    ok(det0.fecha === jueves, 'crear_partido sin fecha usa el próximo jueves')
+  } else {
+    console.log(
+      `  ···  la base ya tiene fechas después del ${jueves}: el partido de prueba va al ${det0.fecha} y esta corrida NO prueba el default de crear_partido`,
+    )
+  }
   ok(det0.estado === 'programado', 'nace en estado programado')
 
   const todos = [yoId, ...creados]
@@ -313,6 +335,101 @@ try {
       p_celdas: [{ autor_id: todos[1], jugador_id: todos[0], puntaje: 10 }],
     },
     'jugador común editando la grilla',
+  )
+
+  // ============ permisos de jugadores ============
+  // El ABM es solo de admin; cada jugador edita únicamente su propia fila.
+  await debeFallar(
+    'crear_jugador',
+    {
+      p_token: tokenComun,
+      p_nombre: 'Intruso',
+      p_apellido: 'Intruso',
+      p_apodo: null,
+      p_email: 'e2e-intruso@prueba.local',
+      p_clave: 'clave-e2e',
+      p_es_admin: false,
+    },
+    'jugador común creando un jugador',
+  )
+  await debeFallar(
+    'eliminar_jugador',
+    { p_token: tokenComun, p_id: creados[0] },
+    'jugador común dando de baja a otro',
+  )
+  await debeFallar(
+    'actualizar_jugador',
+    {
+      p_token: tokenComun,
+      p_id: creados[0],
+      p_nombre: 'Editado',
+      p_apellido: 'Ajeno',
+      p_apodo: null,
+      p_email: 'e2e1@prueba.local',
+      p_clave: null,
+      p_es_admin: null,
+    },
+    'jugador común editando los datos de otro',
+  )
+
+  // Lo suyo sí lo puede editar, pero el flag de admin se ignora.
+  await rpc('actualizar_jugador', {
+    p_token: tokenComun,
+    p_id: creados[1],
+    p_nombre: 'Bruno',
+    p_apellido: 'Yanez',
+    p_apodo: 'bru',
+    p_email: 'e2e2@prueba.local',
+    p_clave: null,
+    p_es_admin: true,
+  })
+  const [suFila] = await rpc('mi_jugador', { p_token: tokenComun })
+  ok(
+    suFila?.id === creados[1] && suFila?.apodo === 'bru',
+    'un jugador común edita sus propios datos',
+  )
+  ok(suFila?.es_admin === false, 'un jugador común no puede marcarse administrador')
+  const [miFila] = await rpc('mi_jugador', { p_token: token })
+  ok(miFila?.id === yoId, 'mi_jugador devuelve solo la fila del token')
+
+  // ============ cierre de puntajes por fecha posterior ============
+  const [antesDeCerrar] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(antesDeCerrar.puntajes_cerrados === false, 'la última fecha tiene los puntajes abiertos')
+
+  // La fecha posterior lleva un jugador de prueba adentro para que
+  // `limpiar_datos_prueba` también se la lleve al terminar.
+  const partidoPosterior = await rpc('crear_partido', {
+    p_token: token,
+    p_fecha: sumarDias(antesDeCerrar.fecha, 7),
+  })
+  await rpc('agregar_jugador_partido', {
+    p_token: token,
+    p_partido_id: partidoPosterior,
+    p_jugador_id: creados[0],
+    p_equipo: 'A',
+  })
+
+  const [trasCerrar] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    trasCerrar.puntajes_cerrados === true,
+    'con una fecha posterior cargada, puntajes_cerrados pasa a true',
+  )
+  await debeFallar(
+    'guardar_puntajes',
+    {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_puntajes: todos.map(jid => ({ jugador_id: jid, puntaje: 6 })),
+    },
+    'puntajes de una fecha ya cerrada',
+  )
+  ok(
+    (await rpc('guardar_grilla_puntajes', {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_celdas: [{ autor_id: todos[0], jugador_id: todos[1], puntaje: 7 }],
+    })) === 1,
+    'la grilla del admin sigue abierta aunque la fecha esté cerrada',
   )
 
   // ============ dashboard ============

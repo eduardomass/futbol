@@ -283,7 +283,14 @@ export default function Partido({ sesion }: PartidoProps) {
       {/* --- Puntajes (solo finalizado y si participé) --- */}
       {partido.estado === 'finalizado' && (
         <section className="rounded-xl border border-white/10 bg-white/5 p-6">
-          <h2 className="text-lg font-semibold text-white">Puntajes</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Puntajes</h2>
+            {partido.puntajes_cerrados && (
+              <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">
+                cerrados
+              </span>
+            )}
+          </div>
 
           {!partido.soy_participante ? (
             <p className="mt-2 text-sm text-slate-400">
@@ -291,10 +298,21 @@ export default function Partido({ sesion }: PartidoProps) {
             </p>
           ) : (
             <>
-              <p className="mt-1 text-sm text-slate-400">
-                Puntuá a los {plantel.length} jugadores del partido, vos incluido. Escala de 1 a 10,
-                de a medio punto. Podés volver a entrar y corregirlos.
-              </p>
+              {partido.puntajes_cerrados ? (
+                <p className="mt-1 text-sm text-slate-400">
+                  Los puntajes de esta fecha ya están cerrados porque hay fechas posteriores
+                  cargadas. Quedan a la vista, pero no se pueden cambiar.{' '}
+                  {sesion.esAdmin
+                    ? 'Para corregir algo, usá la grilla de administrador de más abajo.'
+                    : 'Si hay algo para corregir, pedíselo a un administrador.'}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-400">
+                  Puntuá a los {plantel.length} jugadores del partido, vos incluido. Escala de 1 a
+                  10, de a medio punto. Podés volver a entrar y corregirlos hasta que se cargue la
+                  fecha siguiente.
+                </p>
+              )}
 
               <div className="mt-5 space-y-2">
                 {plantel.map(p => (
@@ -321,10 +339,11 @@ export default function Partido({ sesion }: PartidoProps) {
                     )}
                     <select
                       value={puntajes[p.jugador_id] ?? ''}
+                      disabled={partido.puntajes_cerrados}
                       onChange={e =>
                         setPuntajes({ ...puntajes, [p.jugador_id]: Number(e.target.value) })
                       }
-                      className="ml-auto rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-white outline-none focus:border-emerald-400/60"
+                      className="ml-auto rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-white outline-none focus:border-emerald-400/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">—</option>
                       {ESCALA.map(v => (
@@ -343,29 +362,33 @@ export default function Partido({ sesion }: PartidoProps) {
                 </p>
               )}
 
-              <button
-                disabled={ocupado || Object.keys(puntajes).length !== plantel.length}
-                onClick={() =>
-                  accion(async () => {
-                    await guardarPuntajes(
-                      sesion.token,
-                      partidoId,
-                      plantel.map(p => ({
-                        jugador_id: p.jugador_id,
-                        puntaje: puntajes[p.jugador_id],
-                      })),
-                    )
-                    setAvisoPuntajes('Puntajes guardados.')
-                  })
-                }
-                className="mt-5 rounded-lg bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {partido.ya_puntue ? 'Actualizar puntajes' : 'Guardar puntajes'}
-              </button>
-              {Object.keys(puntajes).length !== plantel.length && (
-                <p className="mt-3 text-sm text-slate-500">
-                  Faltan {plantel.length - Object.keys(puntajes).length} jugadores por puntuar.
-                </p>
+              {!partido.puntajes_cerrados && (
+                <>
+                  <button
+                    disabled={ocupado || Object.keys(puntajes).length !== plantel.length}
+                    onClick={() =>
+                      accion(async () => {
+                        await guardarPuntajes(
+                          sesion.token,
+                          partidoId,
+                          plantel.map(p => ({
+                            jugador_id: p.jugador_id,
+                            puntaje: puntajes[p.jugador_id],
+                          })),
+                        )
+                        setAvisoPuntajes('Puntajes guardados.')
+                      })
+                    }
+                    className="mt-5 rounded-lg bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {partido.ya_puntue ? 'Actualizar puntajes' : 'Guardar puntajes'}
+                  </button>
+                  {Object.keys(puntajes).length !== plantel.length && (
+                    <p className="mt-3 text-sm text-slate-500">
+                      Faltan {plantel.length - Object.keys(puntajes).length} jugadores por puntuar.
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}

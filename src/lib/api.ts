@@ -73,6 +73,15 @@ export function listarJugadores(token: string, incluirInactivos = false): Promis
   return rpc('listar_jugadores', { p_token: token, p_incluir_inactivos: incluirInactivos })
 }
 
+/**
+ * La fila del jugador de la sesión. Es lo que ve un jugador común en la
+ * pantalla de jugadores: sus datos, sin los de los demás.
+ */
+export async function miJugador(token: string): Promise<Jugador | null> {
+  const filas = await rpc<Jugador[]>('mi_jugador', { p_token: token })
+  return filas?.[0] ?? null
+}
+
 export type DatosJugador = {
   nombre: string
   apellido: string

@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 47 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 58 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -58,9 +58,34 @@ que cubre tanto al jugador con el flag como a una sesión de la tabla `usuarios`
 Existe porque `iniciar_sesion` valida contra `jugadores` **antes** que contra `usuarios`:
 quien estaba en las dos tablas nunca conseguía sesión de admin.
 
+Qué puede cada uno (migración `0007`, validado en la base, no solo en la pantalla):
+
+| | admin | jugador común |
+|---|---|---|
+| Alta y baja de jugadores | sí | no |
+| Editar datos de otro jugador | sí | no, solo los propios |
+| Cambiar el flag `es_admin` | sí | no — se ignora lo que manda el cliente |
+| Grilla de puntajes de una fecha | sí | no |
+
+Un jugador común ve en `/jugadores` solo su ficha, que trae `mi_jugador(p_token)`.
+`listar_jugadores` sigue abierta a todos porque se necesita para armar el plantel.
+
+### Los puntajes se cierran con la fecha siguiente
+
+`guardar_puntajes` rechaza la carga si existe **cualquier** partido con fecha posterior:
+pasada la fecha siguiente, nadie retoca los puntajes de la anterior. `obtener_partido`
+devuelve `puntajes_cerrados` para que la pantalla lo explique antes de dejar apretar.
+
+La grilla del admin (`guardar_grilla_puntajes`) **no** tiene ese límite a propósito: es
+la vía para corregir una carga vieja.
+
+Ojo con `scripts/prueba-e2e.mjs`: su partido de prueba tiene que ser el de fecha más
+alta, o el paso de puntajes falla. El script ya lo resuelve mirando `listar_partidos`
+antes de crearlo.
+
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0006_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0007_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,

@@ -43,6 +43,8 @@ export type PartidoDetalle = {
   promedio_fecha: number | null
   soy_participante: boolean
   ya_puntue: boolean
+  /** true cuando ya existe una fecha posterior: el formulario de puntajes se cierra. */
+  puntajes_cerrados: boolean
 }
 
 export type PlantelItem = {
