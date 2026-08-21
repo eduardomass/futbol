@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   agregarJugadorPartido,
   cargarResultado,
   comenzarPartido,
+  eliminarPartido,
   finalizarPartido,
   guardarPuntajes,
   listarJugadores,
@@ -25,6 +26,7 @@ const ESCALA = Array.from({ length: 19 }, (_, i) => 1 + i * 0.5)
 
 export default function Partido({ sesion }: PartidoProps) {
   const { id } = useParams()
+  const navigate = useNavigate()
   const partidoId = Number(id)
 
   const [partido, setPartido] = useState<PartidoDetalle | null>(null)
@@ -80,6 +82,35 @@ export default function Partido({ sesion }: PartidoProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'La acción falló.')
     } finally {
+      setOcupado(false)
+    }
+  }
+
+  /** Borra la fecha entera. Solo admin, y con confirmación: no se deshace. */
+  async function borrarPartido() {
+    if (!partido) return
+    const detalle =
+      plantel.length > 0
+        ? `Se borran el plantel de ${plantel.length} jugadores y todos los puntajes cargados de esa fecha.`
+        : 'No tiene jugadores cargados.'
+    if (
+      !window.confirm(
+        `¿Eliminar la fecha del ${formatearFecha(partido.fecha)}?
+
+${detalle}
+No se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+
+    setOcupado(true)
+    setError(null)
+    try {
+      await eliminarPartido(sesion.token, partidoId)
+      navigate('/', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar la fecha.')
       setOcupado(false)
     }
   }
@@ -410,6 +441,30 @@ export default function Partido({ sesion }: PartidoProps) {
             plantel={plantel}
             onGuardado={() => void cargar()}
           />
+        </section>
+      )}
+
+      {/* --- Eliminar la fecha (solo administradores) --- */}
+      {sesion.esAdmin && (
+        <section className="rounded-xl border border-red-500/20 bg-red-500/5 p-6">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Eliminar la fecha</h2>
+            <span className="rounded border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-300">
+              administrador
+            </span>
+          </div>
+          <p className="text-sm text-slate-400">
+            Borra el partido con su plantel y todos los puntajes cargados. Sirve para una fecha
+            creada de más: mientras exista una fecha posterior, los puntajes de la anterior quedan
+            cerrados.
+          </p>
+          <button
+            disabled={ocupado}
+            onClick={borrarPartido}
+            className="mt-4 rounded-lg border border-red-500/40 px-5 py-2.5 text-sm text-red-300 transition hover:border-red-500/70 hover:text-red-200 disabled:opacity-40"
+          >
+            Eliminar esta fecha
+          </button>
         </section>
       )}
     </div>

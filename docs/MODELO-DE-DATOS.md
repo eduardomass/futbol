@@ -94,6 +94,9 @@ programado ──comenzar_partido──> en_curso ──finalizar_partido──>
 Las tres restricciones las hace cumplir Postgres, no la pantalla: no se pueden saltear
 desde la consola del navegador.
 
+Un partido se puede borrar en cualquier estado con `eliminar_partido` (solo admin), y se
+lleva su plantel y sus puntajes.
+
 Hay un cuarto momento, el **cierre**: cuando se crea un partido con fecha posterior,
 `guardar_puntajes` deja de aceptar cargas para el anterior. La planilla de una fecha se
 cierra sola al abrirse la siguiente. La grilla del admin sigue abierta, que es la vía
@@ -139,6 +142,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `comenzar_partido(…)` | Exige exactamente 5 y 5. |
 | `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. |
 | `finalizar_partido(…)` | Exige resultado cargado. |
+| `eliminar_partido(p_token, p_partido_id)` | **Solo admin.** Borra la fecha; el `on delete cascade` se lleva plantel y puntajes. Devuelve `fecha, estado, jugadores, puntajes` de lo que borró. |
 
 ### Puntajes
 

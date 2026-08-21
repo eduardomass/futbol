@@ -47,7 +47,9 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
   jugador común ve en esa pantalla únicamente su propia ficha, y puede cambiar sus datos
   y su clave.
 - **Partidos**: se crea la fecha (por defecto el próximo jueves), se arman dos equipos
-  de 5 sacando y poniendo jugadores, se comienza, se carga el resultado y se finaliza.
+  de 5 sacando y poniendo jugadores, se comienza, se carga el resultado y se finaliza. Un
+  administrador puede eliminar una fecha entera —con su plantel y sus puntajes— desde la
+  pantalla del partido.
 - **Puntajes**: con el partido finalizado, cada jugador que participó puntúa a los 10
   —él incluido— del 1 al 10 de a medio punto. Se pueden corregir hasta que se cargue una
   fecha posterior: ahí la planilla de esa fecha se cierra y solo un administrador puede
@@ -97,7 +99,7 @@ por funciones `security definer` en Postgres que reciben un token de sesión y v
 quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
 través de `src/lib/api.ts`.
 
-`npm run prueba:e2e` corre 58 aserciones contra la base real ejercitando todo el
+`npm run prueba:e2e` corre 63 aserciones contra la base real ejercitando todo el
 circuito, incluidos los casos que deben ser rechazados. Crea sus propios datos con
 emails `@prueba.local` y los borra al terminar; nunca toca datos reales.
 

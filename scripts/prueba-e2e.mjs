@@ -432,6 +432,34 @@ try {
     'la grilla del admin sigue abierta aunque la fecha esté cerrada',
   )
 
+  // ============ eliminar una fecha (solo admin) ============
+  await debeFallar(
+    'eliminar_partido',
+    { p_token: tokenComun, p_partido_id: partidoPosterior },
+    'jugador común eliminando una fecha',
+  )
+
+  const [borrado] = await rpc('eliminar_partido', {
+    p_token: token,
+    p_partido_id: partidoPosterior,
+  })
+  ok(
+    borrado?.estado === 'programado' && borrado?.jugadores === 1,
+    `eliminar_partido devuelve qué se llevó (${borrado?.estado}, ${borrado?.jugadores} jugador)`,
+  )
+  const vacio = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoPosterior })
+  ok(vacio.length === 0, 'la fecha eliminada ya no existe')
+  const [reabierto] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    reabierto.puntajes_cerrados === false,
+    'al borrar la fecha posterior, los puntajes de la anterior se reabren',
+  )
+  await debeFallar(
+    'eliminar_partido',
+    { p_token: token, p_partido_id: partidoPosterior },
+    'eliminar una fecha que ya no existe',
+  )
+
   // ============ dashboard ============
   const [stats] = await rpc('estadisticas', { p_token: token })
   ok(

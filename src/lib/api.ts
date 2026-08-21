@@ -135,6 +135,21 @@ export function crearPartido(token: string, fecha: string | null): Promise<numbe
   return rpc('crear_partido', { p_token: token, p_fecha: fecha })
 }
 
+/**
+ * Borra la fecha entera: el plantel y todos los puntajes cargados se van con
+ * ella por el `on delete cascade`. Solo administradores. Devuelve qué se
+ * llevó, para poder avisarlo.
+ */
+export async function eliminarPartido(
+  token: string,
+  partidoId: number,
+): Promise<{ fecha: string; estado: string; jugadores: number; puntajes: number } | null> {
+  const filas = await rpc<
+    { fecha: string; estado: string; jugadores: number; puntajes: number }[]
+  >('eliminar_partido', { p_token: token, p_partido_id: partidoId })
+  return filas?.[0] ?? null
+}
+
 export function listarPartidos(token: string): Promise<PartidoResumen[]> {
   return rpc('listar_partidos', { p_token: token })
 }

@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0007`.
+Migraciones aplicadas: `0001` … `0008`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -82,6 +82,10 @@ planilla de una fecha se cierra cuando se carga la siguiente. `obtener_partido` 
 `puntajes_cerrados` para que la pantalla lo avise. `guardar_grilla_puntajes` **no** tiene
 ese límite: es la vía del admin para corregir una fecha vieja.
 
+`eliminar_partido(p_token, p_partido_id)` (migración `0008`, solo admin) borra una fecha
+entera: el cascade se lleva plantel y puntajes. Es la salida cuando se creó una fecha
+posterior de más y dejó cerrados los puntajes de la anterior.
+
 ### Orden de los listados
 
 `listar_jugadores` y `plantel_partido` ordenan **por nombre**, no por apellido — es lo
@@ -109,7 +113,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(58 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(63 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:

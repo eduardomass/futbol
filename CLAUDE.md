@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 58 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 63 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -79,13 +79,17 @@ devuelve `puntajes_cerrados` para que la pantalla lo explique antes de dejar apr
 La grilla del admin (`guardar_grilla_puntajes`) **no** tiene ese límite a propósito: es
 la vía para corregir una carga vieja.
 
+Y si la fecha posterior se creó de más, `eliminar_partido(p_token, p_partido_id)` la
+borra —solo admin, con el `on delete cascade` llevándose plantel y puntajes— y los
+puntajes de la anterior se reabren solos.
+
 Ojo con `scripts/prueba-e2e.mjs`: su partido de prueba tiene que ser el de fecha más
 alta, o el paso de puntajes falla. El script ya lo resuelve mirando `listar_partidos`
 antes de crearlo.
 
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0007_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0008_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,
