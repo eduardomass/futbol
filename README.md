@@ -59,7 +59,9 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
   arrastrándolas, para cargar en el mismo orden que la planilla de papel. Solo la ven
   los jugadores marcados como administradores; para el resto los votos ajenos son
   privados.
-- **Dashboard**: partidos ganados, promedio general y listado de partidos propios.
+- **Dashboard**: partidos ganados, promedio general y listado de partidos propios. Si
+  jugaste la última fecha y todavía no cargaste tus puntajes, arriba aparece un cartel
+  tipo split-flap que va rotando insultos y linkea directo a la votación.
 - **Estadísticas**: tabla del grupo con partidos jugados, ganados, empatados y
   perdidos de cada jugador, sus puntos (3 por ganado, 1 por empatado) y su promedio
   histórico de puntajes. Ordenable por cualquier columna. Incluye un **KPI ajustado**,
@@ -74,7 +76,7 @@ Abre en http://localhost:5173. Ingresar con `eduardomass@gmail.com` / `fenixFENI
 
 ```
 src/
-  components/        Aurora, BlurText, SpotlightCard (ReactBits) + Layout
+  components/        Aurora, BlurText, SplitFlapText, SpotlightCard (ReactBits) + Layout
   lib/supabase.ts    Cliente de Supabase
   lib/api.ts         Todas las llamadas RPC a la base
   lib/session.ts     Token de sesión en localStorage
@@ -99,7 +101,7 @@ por funciones `security definer` en Postgres que reciben un token de sesión y v
 quién llama. El frontend nunca usa `supabase.from(...)`, solo `supabase.rpc(...)` a
 través de `src/lib/api.ts`.
 
-`npm run prueba:e2e` corre 63 aserciones contra la base real ejercitando todo el
+`npm run prueba:e2e` corre 65 aserciones contra la base real ejercitando todo el
 circuito, incluidos los casos que deben ser rechazados. Crea sus propios datos con
 emails `@prueba.local` y los borra al terminar; nunca toca datos reales.
 

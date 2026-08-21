@@ -505,6 +505,16 @@ try {
     mp.find(p => p.id === partidoId)?.resultado === 'ganado',
     'mis_partidos marca el partido nuevo como ganado',
   )
+  // `ya_puntue` es lo que usa el inicio para apretar al que no votó.
+  ok(
+    mp.find(p => p.id === partidoId)?.ya_puntue === true,
+    'mis_partidos marca ya_puntue en la fecha que voté',
+  )
+  const mpComun = await rpc('mis_partidos', { p_token: tokenComun })
+  ok(
+    mpComun.find(p => p.id === partidoId)?.ya_puntue === false,
+    'y en false para quien no cargó sus puntajes',
+  )
 
   const [det] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
   ok(det.soy_participante === true && det.ya_puntue === true, 'flags soy_participante y ya_puntue')

@@ -159,7 +159,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 |---|---|
 | `estadisticas(p_token)` | `partidos_jugados, ganados, empatados, perdidos, promedio_general` del jugador de la sesión. Una sesión de admin puro devuelve todo en cero. |
 | `estadisticas_jugadores(p_token)` | Una fila por jugador con los mismos números. Cuenta solo partidos `finalizado` con resultado cargado. Aparecen los activos más los inactivos con historial. La ve cualquier sesión válida, no solo el admin. |
-| `mis_partidos(p_token)` | Los partidos propios con equipo, resultado y promedio personal de esa fecha. |
+| `mis_partidos(p_token)` | Los partidos propios con equipo, resultado, promedio personal de esa fecha y `ya_puntue`. Ordenado por fecha desc. |
 
 ### Mantenimiento
 

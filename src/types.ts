@@ -88,6 +88,8 @@ export type MiPartido = {
   goles_b: number | null
   resultado: 'ganado' | 'empate' | 'perdido' | null
   mi_promedio: number | null
+  /** Si el jugador ya cargó sus puntajes de esa fecha. */
+  ya_puntue: boolean
 }
 
 /** Nombre corto para mostrar: el apodo si tiene, si no el nombre de pila. */

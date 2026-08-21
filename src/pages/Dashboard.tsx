@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BlurText from '@/components/BlurText'
+import SplitFlapText from '@/components/SplitFlapText'
 import { crearPartido, estadisticas, listarPartidos, misPartidos, proximoJueves } from '@/lib/api'
 import {
   COLOR_ESTADO,
@@ -14,6 +15,9 @@ import type { Estadisticas, MiPartido, PartidoResumen, Sesion } from '@/types'
 type DashboardProps = {
   sesion: Sesion
 }
+
+/** El apriete para el que jugó la última fecha y todavía no votó. */
+const CARTELES = ['VOTA SALAME!', 'HACE CLICK ACA', 'DALE!', 'CAGON!']
 
 export default function Dashboard({ sesion }: DashboardProps) {
   const navigate = useNavigate()
@@ -50,6 +54,20 @@ export default function Dashboard({ sesion }: DashboardProps) {
     void cargar()
   }, [cargar])
 
+  /**
+   * La última fecha que jugué, si todavía no cargué mis puntajes y la
+   * votación sigue abierta. Si ya hay una fecha posterior no tiene sentido
+   * mandarlo: la base rechaza la carga.
+   */
+  const votacionPendiente = useMemo(() => {
+    // `mis_partidos` viene ordenado por fecha desc, así que la primera
+    // finalizada es la última que jugué.
+    const ultima = mios.find(p => p.estado === 'finalizado')
+    if (!ultima || ultima.ya_puntue) return null
+    const fechaMasReciente = todos.reduce((max, p) => (p.fecha > max ? p.fecha : max), '')
+    return fechaMasReciente > ultima.fecha ? null : ultima
+  }, [mios, todos])
+
   async function empezarFecha() {
     setCreando(true)
     setError(null)
@@ -75,6 +93,34 @@ export default function Dashboard({ sesion }: DashboardProps) {
         delay={120}
         className="text-3xl font-bold text-white"
       />
+
+      {/* --- Te falta votar --- */}
+      {votacionPendiente && (
+        <Link
+          to={`/partido/${votacionPendiente.id}`}
+          aria-label={`Cargar tus puntajes de la fecha del ${formatearFechaCorta(votacionPendiente.fecha)}`}
+          className="block rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 transition hover:border-amber-400/70 hover:bg-amber-500/15"
+        >
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-300">
+            Te falta votar la fecha del {formatearFechaCorta(votacionPendiente.fecha)}
+          </p>
+
+          <div className="mt-3 overflow-x-auto">
+            <SplitFlapText
+              words={CARTELES}
+              fontSize="clamp(14px, 4.5vw, 32px)"
+              tileColor="#1c1917"
+              textColor="#fcd34d"
+              cycleDelay={1800}
+            />
+          </div>
+
+          <p className="mt-3 text-sm text-slate-300">
+            Jugaste esa fecha y todavía no puntuaste a nadie. Tocá acá y ponéles nota a los 10,
+            vos incluido. Se cierra cuando se cargue la fecha siguiente.
+          </p>
+        </Link>
+      )}
 
       {error && (
         <p
