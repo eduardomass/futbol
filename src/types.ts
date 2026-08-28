@@ -83,6 +83,10 @@ export type EstadisticaJugador = {
   partidos_empatados: number
   partidos_perdidos: number
   promedio_general: number | null
+  /** Fechas en las que fue el jugador del partido. Los empates lo comparten. */
+  mvp: number
+  /** Fechas en las que fue el peor del partido. Los empates lo comparten. */
+  wvp: number
 }
 
 export type MiPartido = {

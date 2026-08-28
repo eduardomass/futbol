@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 81 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 83 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -109,6 +109,11 @@ Dos reglas del conteo, en la migración `0012`:
 Los empates en el total también se muestran completos: con diez votantes, empatar en dos
 o tres es lo normal.
 
+**En el historial** (`estadisticas_jugadores`, migración `0013`) esos títulos se acumulan en
+`mvp` y `wvp`: en cuántas fechas fue el jugador y el peor del partido. Se **comparten** en
+caso de empate, así que la suma de la columna puede pasar la cantidad de fechas jugadas —
+la pantalla lo aclara al pie. Una fecha con todas las planillas planas no reparte título.
+
 ### Los puntajes se cierran con la fecha siguiente
 
 `guardar_puntajes` rechaza la carga si existe **cualquier** partido con fecha posterior:
@@ -128,7 +133,7 @@ antes de crearlo.
 
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0009_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0013_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,

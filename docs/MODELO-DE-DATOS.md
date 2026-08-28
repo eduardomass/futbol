@@ -167,7 +167,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | función | qué hace |
 |---|---|
 | `estadisticas(p_token)` | `partidos_jugados, ganados, empatados, perdidos, promedio_general` del jugador de la sesión. Una sesión de admin puro devuelve todo en cero. |
-| `estadisticas_jugadores(p_token)` | Una fila por jugador con los mismos números. Cuenta solo partidos `finalizado` con resultado cargado. Aparecen los activos más los inactivos con historial. La ve cualquier sesión válida, no solo el admin. |
+| `estadisticas_jugadores(p_token)` | Una fila por jugador con los mismos números, más `mvp` y `wvp`. Cuenta solo partidos `finalizado` con resultado cargado. Aparecen los activos más los inactivos con historial. La ve cualquier sesión válida, no solo el admin. |
 | `mis_partidos(p_token)` | Los partidos propios con equipo, resultado, promedio personal de esa fecha y `ya_puntue`. Ordenado por fecha desc. |
 
 ### Mantenimiento
@@ -212,3 +212,17 @@ Reglas del conteo:
   es también su mínimo, así que no cuenta (`having max(puntaje) > min(puntaje)`).
 - Una **planilla incompleta** se mide contra los puntajes que sí tiene: las celdas vacías
   no existen como fila.
+
+### MVP y WVP en el historial
+
+`estadisticas_jugadores` acumula esos títulos por jugador (migración `0013`):
+
+| campo | qué cuenta |
+|---|---|
+| `mvp` | En cuántas fechas fue el jugador del partido. |
+| `wvp` | En cuántas fue el peor del partido. |
+
+El título de una fecha se lo lleva quien llega al tope de `mejores` (o de `peores`) de esa
+fecha, y **se comparte en caso de empate**: si dos juntaron 4 «mejores» cada uno, los dos
+suman un MVP. Por eso la suma de la columna puede ser mayor que la cantidad de fechas. Una
+fecha donde todas las planillas son planas no reparte ni MVP ni WVP.

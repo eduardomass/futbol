@@ -37,6 +37,8 @@ const COLUMNAS = [
   { clave: 'puntos', titulo: 'Puntos' },
   { clave: 'kpi', titulo: 'KPI ajustado' },
   { clave: 'promedio_general', titulo: 'Promedio' },
+  { clave: 'mvp', titulo: 'MVP' },
+  { clave: 'wvp', titulo: 'WVP' },
 ] as const
 
 type ClaveOrden = (typeof COLUMNAS)[number]['clave'] | 'nombre'
@@ -115,6 +117,9 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
         ganados: filas.reduce((t, f) => t + f.partidos_ganados, 0),
         empatados: filas.reduce((t, f) => t + f.partidos_empatados, 0),
         perdidos: filas.reduce((t, f) => t + f.partidos_perdidos, 0),
+        // Puede pasar la cantidad de fechas: un empate reparte el título.
+        mvp: filas.reduce((t, f) => t + f.mvp, 0),
+        wvp: filas.reduce((t, f) => t + f.wvp, 0),
       },
     }
   }, [filas, k])
@@ -281,6 +286,30 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
                     <td className="px-3 py-2.5 text-center font-mono text-slate-300">
                       {formatearPromedio(f.promedio_general)}
                     </td>
+                    <td
+                      className={`px-3 py-2.5 text-center font-mono ${
+                        f.mvp > 0 ? 'font-semibold text-amber-300' : 'text-slate-600'
+                      }`}
+                      title={
+                        f.mvp === 0
+                          ? 'Todavía no fue el jugador del partido en ninguna fecha'
+                          : `Jugador del partido en ${f.mvp} ${f.mvp === 1 ? 'fecha' : 'fechas'}`
+                      }
+                    >
+                      {f.mvp}
+                    </td>
+                    <td
+                      className={`px-3 py-2.5 text-center font-mono ${
+                        f.wvp > 0 ? 'font-semibold text-red-300' : 'text-slate-600'
+                      }`}
+                      title={
+                        f.wvp === 0
+                          ? 'Nunca fue el peor del partido'
+                          : `Peor del partido en ${f.wvp} ${f.wvp === 1 ? 'fecha' : 'fechas'}`
+                      }
+                    >
+                      {f.wvp}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -297,6 +326,18 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
                     {formatearPromedio(ppgGrupo)}
                   </td>
                   <td />
+                  <td
+                    className="px-3 py-2 text-center font-mono"
+                    title="Títulos repartidos, contando los compartidos"
+                  >
+                    {totales.mvp}
+                  </td>
+                  <td
+                    className="px-3 py-2 text-center font-mono"
+                    title="Títulos repartidos, contando los compartidos"
+                  >
+                    {totales.wvp}
+                  </td>
                 </tr>
               </tfoot>
             </table>
@@ -318,6 +359,15 @@ export default function Estadisticas({ sesion }: EstadisticasProps) {
             <p>
               <strong className="text-slate-400">Promedio</strong>: el de los puntajes que recibió
               el jugador en su historia, aparte del resultado de los partidos.
+            </p>
+            <p>
+              <strong className="text-slate-400">MVP</strong> y{' '}
+              <strong className="text-slate-400">WVP</strong>: en cuántas fechas fue el jugador y
+              el peor del partido. El título de cada fecha se lo lleva quien más planillas
+              eligieron como su puntaje más alto (o más bajo), y{' '}
+              <strong className="text-slate-400">se comparte si hay empate</strong>, así que los
+              totales pueden pasar la cantidad de fechas jugadas. Una fecha donde todos puntuaron
+              igual a los diez no reparte título.
             </p>
           </div>
         </>

@@ -635,6 +635,23 @@ try {
     tabla.length >= baseTabla.length + 9,
     `la tabla incluye los 9 jugadores de prueba (${baseTabla.length} → ${tabla.length})`,
   )
+
+  // MVP / WVP: en la fecha de prueba quedaron dos planillas cargadas. En la
+  // mía todos tienen 9 menos todos[1], y en la del otro autor todos[0] y
+  // todos[1] tienen 10 y todos[9] un 1. Así todos[0] junta 2 «mejores» y se
+  // lleva el MVP solo, mientras el peor queda empatado en 1 entre todos[1] y
+  // todos[9]: los dos se llevan el WVP de la fecha.
+  ok(
+    mia?.mvp === baseMia.mvp + 1,
+    `estadisticas_jugadores suma el MVP de la fecha nueva (${baseMia.mvp} → ${mia?.mvp})`,
+  )
+  const empatadosWvp = tabla.filter(
+    f => (f.jugador_id === todos[1] || f.jugador_id === todos[9]) && f.wvp === 1,
+  )
+  ok(
+    empatadosWvp.length === 2 && mia?.wvp === baseMia.wvp,
+    'el WVP de una fecha se comparte entre los dos empatados en el peor puntaje',
+  )
   const tablaComun = await rpc('estadisticas_jugadores', { p_token: tokenComun })
   ok(
     tablaComun.length === tabla.length,
