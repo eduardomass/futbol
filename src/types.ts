@@ -55,6 +55,8 @@ export type PlantelItem = {
   equipo: 'A' | 'B'
   promedio: number | null
   votos: number
+  /** Goles que hizo en ese partido. Arranca en 0, nunca queda en null. */
+  goles: number
 }
 
 export type Estadisticas = {

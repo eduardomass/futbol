@@ -199,6 +199,7 @@ try {
   let plantel = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
   ok(plantel.length === 10, 'plantel de 10')
   ok(plantel.filter(p => p.equipo === 'A').length === 5, '5 en el equipo A')
+  ok(plantel.every(p => p.goles === 0), 'los goles de cada jugador arrancan en 0')
 
   const nombresA = plantel.filter(p => p.equipo === 'A').map(p => p.nombre)
   ok(
@@ -218,6 +219,16 @@ try {
     'comenzar_partido',
     { p_token: token, p_partido_id: partidoId },
     'comenzar con 9 jugadores',
+  )
+
+  await debeFallar(
+    'guardar_goles',
+    {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_goles: [{ jugador_id: todos[0], goles: 1 }],
+    },
+    'cargar goles de un partido todavía programado',
   )
 
   await rpc('agregar_jugador_partido', {
@@ -246,8 +257,72 @@ try {
     p_goles_a: 4,
     p_goles_b: 2,
   })
+
+  // ============ goles por jugador ============
+  // Se pueden cargar con el partido en curso, antes de finalizar.
+  const golesA = [2, 1, 1, 0, 0]
+  ok(
+    (await rpc('guardar_goles', {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_goles: todos.slice(0, 5).map((jid, i) => ({ jugador_id: jid, goles: golesA[i] })),
+    })) === 5,
+    'guardar_goles atribuye los 4 goles del equipo A con el partido en curso',
+  )
+
   await rpc('finalizar_partido', { p_token: token, p_partido_id: partidoId })
   ok(true, 'cargar_resultado 4-2 y finalizar_partido')
+
+  // Ya finalizado siguen abiertos: un gol es un hecho del partido, no un voto
+  // que haya que congelar como los puntajes.
+  await rpc('guardar_goles', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles: todos.slice(5).map((jid, i) => ({ jugador_id: jid, goles: i < 2 ? 1 : 0 })),
+  })
+  const conGoles = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
+  const sumaA = conGoles.filter(p => p.equipo === 'A').reduce((t, p) => t + p.goles, 0)
+  const sumaB = conGoles.filter(p => p.equipo === 'B').reduce((t, p) => t + p.goles, 0)
+  ok(
+    sumaA === 4 && sumaB === 2,
+    `plantel_partido devuelve los goles cargados y suman el resultado (${sumaA}-${sumaB})`,
+  )
+
+  // Carga parcial: reenviar un solo jugador no borra los goles de los demás.
+  await rpc('guardar_goles', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles: [{ jugador_id: todos[0], goles: 3 }],
+  })
+  const trasParcial = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    trasParcial.find(p => p.jugador_id === todos[0]).goles === 3 &&
+      trasParcial.filter(p => p.equipo === 'A').reduce((t, p) => t + p.goles, 0) === 5,
+    'una carga parcial corrige a un jugador y deja los goles del resto',
+  )
+
+  await debeFallar(
+    'guardar_goles',
+    { p_token: token, p_partido_id: partidoId, p_goles: [{ jugador_id: todos[0], goles: -1 }] },
+    'goles negativos',
+  )
+  await debeFallar(
+    'guardar_goles',
+    { p_token: token, p_partido_id: partidoId, p_goles: [{ jugador_id: 999999, goles: 1 }] },
+    'goles de un jugador que no jugó el partido',
+  )
+  await debeFallar(
+    'guardar_goles',
+    {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_goles: [
+        { jugador_id: todos[0], goles: 1 },
+        { jugador_id: todos[0], goles: 2 },
+      ],
+    },
+    'un jugador repetido en la misma carga de goles',
+  )
 
   // ============ puntajes del propio jugador ============
   await debeFallar(

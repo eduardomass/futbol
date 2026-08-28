@@ -6,6 +6,7 @@ import {
   comenzarPartido,
   eliminarPartido,
   finalizarPartido,
+  guardarGoles,
   guardarPuntajes,
   listarJugadores,
   misPuntajes,
@@ -38,6 +39,9 @@ export default function Partido({ sesion }: PartidoProps) {
 
   const [golesA, setGolesA] = useState('')
   const [golesB, setGolesB] = useState('')
+  /** Goles de cada jugador, por jugador_id. Se editan como texto para poder vaciar el input. */
+  const [golesJugador, setGolesJugador] = useState<Record<number, string>>({})
+  const [avisoGoles, setAvisoGoles] = useState<string | null>(null)
   const [puntajes, setPuntajes] = useState<Record<number, number>>({})
   const [avisoPuntajes, setAvisoPuntajes] = useState<string | null>(null)
 
@@ -55,6 +59,7 @@ export default function Partido({ sesion }: PartidoProps) {
       setDisponibles(js.filter(j => !enPartido.has(j.id)))
       setGolesA(p?.goles_a?.toString() ?? '')
       setGolesB(p?.goles_b?.toString() ?? '')
+      setGolesJugador(Object.fromEntries(pl.map(x => [x.jugador_id, String(x.goles ?? 0)])))
 
       if (p?.estado === 'finalizado' && p.soy_participante) {
         const mios = await misPuntajes(sesion.token, partidoId)
@@ -118,6 +123,11 @@ No se puede deshacer.`,
   const equipoA = useMemo(() => plantel.filter(p => p.equipo === 'A'), [plantel])
   const equipoB = useMemo(() => plantel.filter(p => p.equipo === 'B'), [plantel])
   const completo = equipoA.length === 5 && equipoB.length === 5
+
+  /** Lo que suman los goles individuales que hay ahora en el formulario. */
+  function sumaGoles(items: PlantelItem[]): number {
+    return items.reduce((total, p) => total + (Number(golesJugador[p.jugador_id]) || 0), 0)
+  }
 
   if (cargando) return <p className="text-slate-400">Cargando…</p>
 
@@ -311,6 +321,70 @@ No se puede deshacer.`,
         </section>
       )}
 
+      {/* --- Goles por jugador (desde que el partido comenzó) --- */}
+      {partido.estado !== 'programado' && (
+        <section className="rounded-xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-lg font-semibold text-white">Goles por jugador</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Cuántos goles hizo cada uno. El resultado de la fecha sigue siendo el de arriba: los
+            goles individuales pueden sumar menos si hubo alguno en contra.
+          </p>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <ColumnaGoles
+              letra="A"
+              items={equipoA}
+              valores={golesJugador}
+              suma={sumaGoles(equipoA)}
+              oficial={partido.goles_a}
+              onCambio={(jugadorId, valor) => {
+                setGolesJugador({ ...golesJugador, [jugadorId]: valor })
+                setAvisoGoles(null)
+              }}
+              ocupado={ocupado}
+            />
+            <ColumnaGoles
+              letra="B"
+              items={equipoB}
+              valores={golesJugador}
+              suma={sumaGoles(equipoB)}
+              oficial={partido.goles_b}
+              onCambio={(jugadorId, valor) => {
+                setGolesJugador({ ...golesJugador, [jugadorId]: valor })
+                setAvisoGoles(null)
+              }}
+              ocupado={ocupado}
+            />
+          </div>
+
+          {avisoGoles && (
+            <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              {avisoGoles}
+            </p>
+          )}
+
+          <button
+            disabled={ocupado || plantel.length === 0}
+            onClick={() =>
+              accion(async () => {
+                await guardarGoles(
+                  sesion.token,
+                  partidoId,
+                  plantel.map(p => ({
+                    jugador_id: p.jugador_id,
+                    goles: Number(golesJugador[p.jugador_id]) || 0,
+                  })),
+                )
+                setAvisoGoles('Goles guardados.')
+              })
+            }
+            className="mt-5 rounded-lg bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Guardar goles
+          </button>
+        </section>
+      )}
+
       {/* --- Puntajes (solo finalizado y si participé) --- */}
       {partido.estado === 'finalizado' && (
         <section className="rounded-xl border border-white/10 bg-white/5 p-6">
@@ -501,6 +575,14 @@ function Equipo({
             >
               <span className="text-white">{nombreCorto(p)}</span>
               <span className="text-slate-500">{p.apellido}</span>
+              {estado !== 'programado' && p.goles > 0 && (
+                <span
+                  title={`${p.goles} ${p.goles === 1 ? 'gol' : 'goles'}`}
+                  className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs text-emerald-300"
+                >
+                  ⚽ {p.goles}
+                </span>
+              )}
               {estado === 'finalizado' && (
                 <span className="ml-auto text-slate-400">
                   {formatearPromedio(p.promedio)}
@@ -519,6 +601,74 @@ function Equipo({
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * La columna de goles de un equipo. Muestra el subtotal contra el resultado
+ * oficial: si no coinciden lo avisa, pero no impide guardar — un gol en contra
+ * cuenta para el marcador y no para ningún goleador.
+ */
+function ColumnaGoles({
+  letra,
+  items,
+  valores,
+  suma,
+  oficial,
+  onCambio,
+  ocupado,
+}: {
+  letra: 'A' | 'B'
+  items: PlantelItem[]
+  valores: Record<number, string>
+  suma: number
+  oficial: number | null
+  onCambio: (jugadorId: number, valor: string) => void
+  ocupado: boolean
+}) {
+  const acento = letra === 'A' ? 'text-sky-300' : 'text-fuchsia-300'
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 p-5">
+      <div className="mb-4 flex items-baseline gap-2">
+        <h3 className={`font-semibold ${acento}`}>Equipo {letra}</h3>
+        <span className="ml-auto text-sm text-slate-400">
+          suma <span className="font-mono text-white">{suma}</span>
+          {oficial !== null && <span className="text-slate-500"> / {oficial}</span>}
+        </span>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-slate-500">Sin jugadores.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map(p => (
+            <li key={p.jugador_id} className="flex items-center gap-3 text-sm">
+              <span className="text-white">{nombreCorto(p)}</span>
+              <span className="text-slate-500">{p.apellido}</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                disabled={ocupado}
+                value={valores[p.jugador_id] ?? '0'}
+                onChange={e => onCambio(p.jugador_id, e.target.value)}
+                aria-label={`Goles de ${nombreCorto(p)} ${p.apellido}`}
+                className="ml-auto w-20 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-right text-white outline-none focus:border-emerald-400/60 disabled:opacity-50"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {oficial !== null && suma !== oficial && (
+        <p className="mt-4 text-xs text-amber-300">
+          Los goles individuales suman {suma} y el resultado dice {oficial}.
+          {suma < oficial
+            ? ' Puede estar bien si hubo un gol en contra.'
+            : ' Revisá: no pueden ser más que los del equipo.'}
+        </p>
       )}
     </div>
   )

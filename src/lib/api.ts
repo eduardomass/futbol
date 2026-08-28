@@ -217,6 +217,24 @@ export function finalizarPartido(token: string, partidoId: number): Promise<void
   return rpc('finalizar_partido', { p_token: token, p_partido_id: partidoId })
 }
 
+/**
+ * Atribuye los goles del partido a cada jugador. `goles_a` / `goles_b` del
+ * partido siguen siendo el resultado oficial: los individuales pueden sumar
+ * menos, por ejemplo si hubo un gol en contra. Acepta cargas parciales y se
+ * puede reenviar para corregir. Devuelve cuántas filas tocó.
+ */
+export function guardarGoles(
+  token: string,
+  partidoId: number,
+  goles: { jugador_id: number; goles: number }[],
+): Promise<number> {
+  return rpc('guardar_goles', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles: goles,
+  })
+}
+
 // ---------- puntajes ----------
 
 export function guardarPuntajes(

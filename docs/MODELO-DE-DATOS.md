@@ -58,11 +58,12 @@ Tokens propios, no se usa Supabase Auth.
 ### `partido_jugadores`
 10 filas por partido: 5 con `equipo = 'A'` y 5 con `'B'`.
 
-| columna      | tipo   | notas                                     |
-|--------------|--------|-------------------------------------------|
-| `partido_id` | bigint | FK `partidos`, `on delete cascade`        |
-| `jugador_id` | bigint | FK `jugadores`, `on delete restrict`      |
-| `equipo`     | text   | `'A'` o `'B'`                             |
+| columna      | tipo    | notas                                          |
+|--------------|---------|------------------------------------------------|
+| `partido_id` | bigint  | FK `partidos`, `on delete cascade`             |
+| `jugador_id` | bigint  | FK `jugadores`, `on delete restrict`           |
+| `equipo`     | text    | `'A'` o `'B'`                                  |
+| `goles`      | integer | `not null default 0`, `>= 0`: los que hizo él  |
 
 `unique (partido_id, jugador_id)`.
 
@@ -93,6 +94,12 @@ programado ──comenzar_partido──> en_curso ──finalizar_partido──>
 
 Las tres restricciones las hace cumplir Postgres, no la pantalla: no se pueden saltear
 desde la consola del navegador.
+
+Los **goles por jugador** (`partido_jugadores.goles`, `guardar_goles`) se cargan desde
+que el partido comenzó y siguen editables una vez finalizado: son un hecho del partido,
+no un voto que haya que congelar. No tienen que sumar el marcador —un gol en contra
+cuenta para el equipo y para ningún goleador—, así que la base no lo valida y la pantalla
+solo avisa cuando no cierran.
 
 Un partido se puede borrar en cualquier estado con `eliminar_partido` (solo admin), y se
 lleva su plantel y sus puntajes.
@@ -136,11 +143,12 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `crear_partido(p_token, p_fecha)` | `p_fecha` en null usa `proximo_jueves()`. |
 | `listar_partidos(p_token)` | Todas las fechas con cantidad de jugadores y promedio. |
 | `obtener_partido(p_token, p_partido_id)` | Detalle + `promedio_fecha`, `soy_participante`, `ya_puntue` y `puntajes_cerrados` (true si existe algún partido con fecha posterior). |
-| `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio y cantidad de votos. Ordenado por equipo y después **por nombre**. |
+| `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio, cantidad de votos y `goles`. Ordenado por equipo y después **por nombre**. |
 | `agregar_jugador_partido(…, p_equipo)` | Solo en `programado`; rechaza el 6º del equipo y los repetidos. |
 | `quitar_jugador_partido(…)` | Solo en `programado`. |
 | `comenzar_partido(…)` | Exige exactamente 5 y 5. |
-| `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. |
+| `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. Es el marcador de la fecha. |
+| `guardar_goles(p_token, p_partido_id, p_goles)` | `p_goles` es `[{jugador_id, goles}]`. Atribuye los goles a cada jugador. Partido en `en_curso` o `finalizado`, cualquier sesión válida. Acepta cargas parciales y reenviar corrige. Devuelve cuántas filas tocó. |
 | `finalizar_partido(…)` | Exige resultado cargado. |
 | `eliminar_partido(p_token, p_partido_id)` | **Solo admin.** Borra la fecha; el `on delete cascade` se lleva plantel y puntajes. Devuelve `fecha, estado, jugadores, puntajes` de lo que borró. |
 

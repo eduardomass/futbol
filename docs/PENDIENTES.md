@@ -111,6 +111,10 @@ login) más `motion`. Si molesta el tiempo de carga, la salida es cargar `Aurora
   columnas** (arrastrar el nombre o las flechas ‹ ›, el orden se guarda en
   `localStorage` bajo `futbol.grilla.orden.<partidoId>`); las filas siguen ordenadas
   por equipo y nombre.
+- **Ranking de goleadores**: los goles por jugador ya se guardan
+  (`partido_jugadores.goles`, migración `0010`) y se ven en la pantalla de cada fecha,
+  pero `estadisticas_jugadores` todavía no los suma: falta la columna de goles en la
+  tabla del grupo y en las tarjetas del inicio.
 - **Equipos automáticos**: hoy la asignación al equipo A o B es manual. Se descartó
   armarlos al azar, pero podría volver como opción.
 - **Puntajes propios del jugador**: cada uno carga los suyos por su link. Funciona, pero

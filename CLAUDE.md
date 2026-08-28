@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 65 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 73 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -69,6 +69,17 @@ Qué puede cada uno (migración `0007`, validado en la base, no solo en la panta
 
 Un jugador común ve en `/jugadores` solo su ficha, que trae `mi_jugador(p_token)`.
 `listar_jugadores` sigue abierta a todos porque se necesita para armar el plantel.
+
+### Los goles por jugador son atribución, no resultado
+
+`partido_jugadores.goles` dice cuántos hizo cada uno; el marcador de la fecha sigue
+siendo `partidos.goles_a` / `goles_b`. Son dos datos distintos a propósito: un gol en
+contra cuenta para el equipo y para ningún goleador, así que la suma individual puede dar
+menos que el marcador. Por eso `guardar_goles` **no** valida que coincidan — la pantalla
+muestra el subtotal de cada equipo al lado del resultado y avisa cuando no cierra.
+
+Se cargan con el partido en `en_curso` o `finalizado`, desde cualquier sesión válida, y
+sin el cierre por fecha posterior que tienen los puntajes.
 
 ### Los puntajes se cierran con la fecha siguiente
 

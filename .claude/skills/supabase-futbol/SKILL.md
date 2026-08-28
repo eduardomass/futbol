@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0009`.
+Migraciones aplicadas: `0001` … `0010`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -55,7 +55,7 @@ scripts que borren por conteo o por rango de id.
 | `jugadores`         | `id, nombre, apellido, apodo, email, clave, activo, es_admin`     |
 | `sesiones`          | token uuid → `jugador_id` o `usuario_id`, vence a los 30 días     |
 | `partidos`          | `fecha`, `estado`, `goles_a`, `goles_b`                           |
-| `partido_jugadores` | 10 filas por partido, 5 con `equipo = 'A'` y 5 con `'B'`          |
+| `partido_jugadores` | 10 filas por partido, 5 con `equipo = 'A'` y 5 con `'B'`, `goles` |
 | `puntajes`          | un voto por `(partido, autor, jugador)`, escala 1–10 de a 0,5     |
 
 ### Administradores
@@ -86,6 +86,20 @@ ese límite: es la vía del admin para corregir una fecha vieja.
 entera: el cascade se lleva plantel y puntajes. Es la salida cuando se creó una fecha
 posterior de más y dejó cerrados los puntajes de la anterior.
 
+### Goles por jugador
+
+`partido_jugadores.goles` (migración `0010`, default 0) guarda cuántos goles hizo cada
+uno. Es **atribución**, no resultado: el marcador de la fecha sigue siendo
+`partidos.goles_a` / `goles_b`. La base no exige que la suma individual coincida con el
+marcador porque un gol en contra no es de ningún goleador; la pantalla muestra el
+subtotal al lado del resultado y avisa cuando no cierran.
+
+`guardar_goles(p_token, p_partido_id, p_goles jsonb)` acepta
+`[{jugador_id, goles}]`, admite cargas parciales y se puede reenviar para corregir.
+Pide sesión válida y partido en `en_curso` o `finalizado` — sin restricción de admin ni
+cierre por fecha posterior: un gol es un hecho del partido, no un voto. `plantel_partido`
+devuelve la columna `goles`.
+
 ### Orden de los listados
 
 `listar_jugadores` y `plantel_partido` ordenan **por nombre**, no por apellido — es lo
@@ -113,7 +127,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(65 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(73 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:
