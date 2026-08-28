@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0010`.
+Migraciones aplicadas: `0001` … `0011`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -89,16 +89,19 @@ posterior de más y dejó cerrados los puntajes de la anterior.
 ### Goles por jugador
 
 `partido_jugadores.goles` (migración `0010`, default 0) guarda cuántos goles hizo cada
-uno. Es **atribución**, no resultado: el marcador de la fecha sigue siendo
-`partidos.goles_a` / `goles_b`. La base no exige que la suma individual coincida con el
-marcador porque un gol en contra no es de ningún goleador; la pantalla muestra el
-subtotal al lado del resultado y avisa cuando no cierran.
+uno, y `plantel_partido` devuelve la columna.
 
-`guardar_goles(p_token, p_partido_id, p_goles jsonb)` acepta
-`[{jugador_id, goles}]`, admite cargas parciales y se puede reenviar para corregir.
-Pide sesión válida y partido en `en_curso` o `finalizado` — sin restricción de admin ni
-cierre por fecha posterior: un gol es un hecho del partido, no un voto. `plantel_partido`
-devuelve la columna `goles`.
+`guardar_goles(p_token, p_partido_id, p_goles jsonb)` acepta `[{jugador_id, goles}]`,
+admite cargas parciales y se puede reenviar para corregir. Pide sesión válida y partido
+en `en_curso` o `finalizado` — sin restricción de admin ni cierre por fecha posterior:
+un gol es un hecho del partido, no un voto.
+
+Desde la migración `0011` **recalcula el marcador**: `partidos.goles_a` / `goles_b`
+quedan con la suma de cada equipo, tomada del plantel completo y no solo de lo que llegó
+en el array. La excepción es la carga toda en cero, que deja el resultado intacto: un
+plantel en cero es «no cargué nada», no un 0-0. Contracara: el marcador es la suma de
+los goleadores, así que un gol en contra no se puede representar — se corrige con
+`cargar_resultado` después.
 
 ### Orden de los listados
 
@@ -127,7 +130,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(73 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(76 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:

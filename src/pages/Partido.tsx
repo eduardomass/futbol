@@ -270,7 +270,8 @@ No se puede deshacer.`,
         <section className="rounded-xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-lg font-semibold text-white">Resultado</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Cargá los goles y después finalizá el partido para habilitar los puntajes.
+            Cargá los goles y después finalizá el partido para habilitar los puntajes. Si cargás
+            los goles de cada jugador más abajo, este resultado se completa solo con la suma.
           </p>
 
           <div className="mt-4 flex flex-wrap items-end gap-4">
@@ -326,8 +327,9 @@ No se puede deshacer.`,
         <section className="rounded-xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-lg font-semibold text-white">Goles por jugador</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Cuántos goles hizo cada uno. El resultado de la fecha sigue siendo el de arriba: los
-            goles individuales pueden sumar menos si hubo alguno en contra.
+            Cuántos goles hizo cada uno. Al guardar, el resultado de la fecha queda con la suma de
+            cada equipo. Si están todos en cero no se toca nada: el resultado se mantiene como
+            estaba.
           </p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -336,7 +338,6 @@ No se puede deshacer.`,
               items={equipoA}
               valores={golesJugador}
               suma={sumaGoles(equipoA)}
-              oficial={partido.goles_a}
               onCambio={(jugadorId, valor) => {
                 setGolesJugador({ ...golesJugador, [jugadorId]: valor })
                 setAvisoGoles(null)
@@ -348,7 +349,6 @@ No se puede deshacer.`,
               items={equipoB}
               valores={golesJugador}
               suma={sumaGoles(equipoB)}
-              oficial={partido.goles_b}
               onCambio={(jugadorId, valor) => {
                 setGolesJugador({ ...golesJugador, [jugadorId]: valor })
                 setAvisoGoles(null)
@@ -356,6 +356,20 @@ No se puede deshacer.`,
               ocupado={ocupado}
             />
           </div>
+
+          <p className="mt-4 text-sm text-slate-400">
+            {sumaGoles(plantel) === 0 ? (
+              'Sin goles cargados: al guardar, el resultado de la fecha queda como está.'
+            ) : (
+              <>
+                Al guardar, el resultado de la fecha queda{' '}
+                <span className="font-mono text-white">
+                  {sumaGoles(equipoA)} - {sumaGoles(equipoB)}
+                </span>
+                .
+              </>
+            )}
+          </p>
 
           {avisoGoles && (
             <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
@@ -607,16 +621,14 @@ function Equipo({
 }
 
 /**
- * La columna de goles de un equipo. Muestra el subtotal contra el resultado
- * oficial: si no coinciden lo avisa, pero no impide guardar — un gol en contra
- * cuenta para el marcador y no para ningún goleador.
+ * La columna de goles de un equipo, con el subtotal en el encabezado: es el
+ * número con el que va a quedar el resultado de la fecha al guardar.
  */
 function ColumnaGoles({
   letra,
   items,
   valores,
   suma,
-  oficial,
   onCambio,
   ocupado,
 }: {
@@ -624,7 +636,6 @@ function ColumnaGoles({
   items: PlantelItem[]
   valores: Record<number, string>
   suma: number
-  oficial: number | null
   onCambio: (jugadorId: number, valor: string) => void
   ocupado: boolean
 }) {
@@ -635,7 +646,6 @@ function ColumnaGoles({
         <h3 className={`font-semibold ${acento}`}>Equipo {letra}</h3>
         <span className="ml-auto text-sm text-slate-400">
           suma <span className="font-mono text-white">{suma}</span>
-          {oficial !== null && <span className="text-slate-500"> / {oficial}</span>}
         </span>
       </div>
 
@@ -662,14 +672,6 @@ function ColumnaGoles({
         </ul>
       )}
 
-      {oficial !== null && suma !== oficial && (
-        <p className="mt-4 text-xs text-amber-300">
-          Los goles individuales suman {suma} y el resultado dice {oficial}.
-          {suma < oficial
-            ? ' Puede estar bien si hubo un gol en contra.'
-            : ' Revisá: no pueden ser más que los del equipo.'}
-        </p>
-      )}
     </div>
   )
 }

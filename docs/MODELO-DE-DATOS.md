@@ -97,9 +97,10 @@ desde la consola del navegador.
 
 Los **goles por jugador** (`partido_jugadores.goles`, `guardar_goles`) se cargan desde
 que el partido comenzó y siguen editables una vez finalizado: son un hecho del partido,
-no un voto que haya que congelar. No tienen que sumar el marcador —un gol en contra
-cuenta para el equipo y para ningún goleador—, así que la base no lo valida y la pantalla
-solo avisa cuando no cierran.
+no un voto que haya que congelar. Y **arman el marcador**: al guardarlos,
+`partidos.goles_a` / `goles_b` quedan con la suma de cada equipo, tomada del plantel
+completo. Si el partido entero suma cero, el resultado no se toca —un plantel en cero es
+«no cargué nada», no un 0-0— y ese caso se carga con `cargar_resultado`.
 
 Un partido se puede borrar en cualquier estado con `eliminar_partido` (solo admin), y se
 lleva su plantel y sus puntajes.
@@ -147,8 +148,8 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `agregar_jugador_partido(…, p_equipo)` | Solo en `programado`; rechaza el 6º del equipo y los repetidos. |
 | `quitar_jugador_partido(…)` | Solo en `programado`. |
 | `comenzar_partido(…)` | Exige exactamente 5 y 5. |
-| `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. Es el marcador de la fecha. |
-| `guardar_goles(p_token, p_partido_id, p_goles)` | `p_goles` es `[{jugador_id, goles}]`. Atribuye los goles a cada jugador. Partido en `en_curso` o `finalizado`, cualquier sesión válida. Acepta cargas parciales y reenviar corrige. Devuelve cuántas filas tocó. |
+| `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. Carga el marcador a mano; la vía normal es `guardar_goles`. |
+| `guardar_goles(p_token, p_partido_id, p_goles)` | `p_goles` es `[{jugador_id, goles}]`. Atribuye los goles y **recalcula el marcador** con la suma de cada equipo sobre el plantel completo; si todo suma cero, lo deja como estaba. Partido en `en_curso` o `finalizado`, cualquier sesión válida. Acepta cargas parciales y reenviar corrige. Devuelve cuántas filas tocó. |
 | `finalizar_partido(…)` | Exige resultado cargado. |
 | `eliminar_partido(p_token, p_partido_id)` | **Solo admin.** Borra la fecha; el `on delete cascade` se lleva plantel y puntajes. Devuelve `fecha, estado, jugadores, puntajes` de lo que borró. |
 

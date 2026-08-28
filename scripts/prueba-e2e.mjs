@@ -259,7 +259,20 @@ try {
   })
 
   // ============ goles por jugador ============
-  // Se pueden cargar con el partido en curso, antes de finalizar.
+  // Una carga toda en cero no es un 0-0: el resultado tiene que quedar como está.
+  await rpc('guardar_goles', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles: todos.map(jid => ({ jugador_id: jid, goles: 0 })),
+  })
+  const [trasCero] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    trasCero.goles_a === 4 && trasCero.goles_b === 2,
+    'una carga de goles toda en cero no toca el resultado cargado a mano',
+  )
+
+  // Se pueden cargar con el partido en curso, antes de finalizar, y el
+  // marcador se recalcula con la suma de cada equipo.
   const golesA = [2, 1, 1, 0, 0]
   ok(
     (await rpc('guardar_goles', {
@@ -268,6 +281,11 @@ try {
       p_goles: todos.slice(0, 5).map((jid, i) => ({ jugador_id: jid, goles: golesA[i] })),
     })) === 5,
     'guardar_goles atribuye los 4 goles del equipo A con el partido en curso',
+  )
+  const [trasA] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    trasA.goles_a === 4 && trasA.goles_b === 0,
+    `los goles individuales recalculan el resultado (${trasA.goles_a}-${trasA.goles_b})`,
   )
 
   await rpc('finalizar_partido', { p_token: token, p_partido_id: partidoId })
@@ -299,6 +317,11 @@ try {
     trasParcial.find(p => p.jugador_id === todos[0]).goles === 3 &&
       trasParcial.filter(p => p.equipo === 'A').reduce((t, p) => t + p.goles, 0) === 5,
     'una carga parcial corrige a un jugador y deja los goles del resto',
+  )
+  const [trasCorregir] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    trasCorregir.goles_a === 5 && trasCorregir.goles_b === 2,
+    `el recálculo suma el plantel completo, no solo la carga parcial (${trasCorregir.goles_a}-${trasCorregir.goles_b})`,
   )
 
   await debeFallar(
@@ -543,7 +566,7 @@ try {
   )
   ok(
     stats.partidos_ganados === baseStats.partidos_ganados + 1,
-    `partidos_ganados suma 1: jugué en A y ganó 4-2 (${baseStats.partidos_ganados} → ${stats.partidos_ganados})`,
+    `partidos_ganados suma 1: jugué en A y ganó (${baseStats.partidos_ganados} → ${stats.partidos_ganados})`,
   )
 
   // La tabla del módulo de estadísticas: mi fila tiene que moverse igual que

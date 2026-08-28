@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 73 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 76 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -70,16 +70,26 @@ Qué puede cada uno (migración `0007`, validado en la base, no solo en la panta
 Un jugador común ve en `/jugadores` solo su ficha, que trae `mi_jugador(p_token)`.
 `listar_jugadores` sigue abierta a todos porque se necesita para armar el plantel.
 
-### Los goles por jugador son atribución, no resultado
+### Los goles por jugador arman el resultado
 
-`partido_jugadores.goles` dice cuántos hizo cada uno; el marcador de la fecha sigue
-siendo `partidos.goles_a` / `goles_b`. Son dos datos distintos a propósito: un gol en
-contra cuenta para el equipo y para ningún goleador, así que la suma individual puede dar
-menos que el marcador. Por eso `guardar_goles` **no** valida que coincidan — la pantalla
-muestra el subtotal de cada equipo al lado del resultado y avisa cuando no cierra.
+`partido_jugadores.goles` dice cuántos hizo cada uno, y `guardar_goles` **recalcula**
+`partidos.goles_a` / `goles_b` con la suma de cada equipo. Cargar los goles de los
+jugadores es la forma normal de cargar el resultado; `cargar_resultado` queda como la
+vía manual.
+
+Dos detalles que importan:
+
+- **Todo en cero no toca el resultado.** Un plantel sin goles cargados no es un 0-0 sino
+  «todavía no lo cargué», así que `guardar_goles` deja el marcador como estaba. Un 0-0
+  real se carga con `cargar_resultado`.
+- **La suma es del plantel completo**, no de lo que llegó en el array. `guardar_goles`
+  acepta cargas parciales, y aun así el marcador sale de los 10.
 
 Se cargan con el partido en `en_curso` o `finalizado`, desde cualquier sesión válida, y
-sin el cierre por fecha posterior que tienen los puntajes.
+sin el cierre por fecha posterior que tienen los puntajes: un gol es un hecho del
+partido, no un voto. Ojo con la contracara: al ser el marcador la suma de los goleadores,
+**no hay lugar para un gol en contra** — si aparece, hay que corregir con
+`cargar_resultado` después de guardar los goles.
 
 ### Los puntajes se cierran con la fecha siguiente
 
