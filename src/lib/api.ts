@@ -213,6 +213,29 @@ export function cargarResultado(
   })
 }
 
+/**
+ * Corrige el marcador de una fecha. **Solo administradores**, y sin límite de
+ * estado: es la vía para arreglar un resultado mal cargado después de
+ * finalizada la fecha, cuando `cargarResultado` ya no acepta.
+ *
+ * Ojo: `guardarGoles` recalcula el marcador con la suma de los goleadores, así
+ * que una corrección a mano se pierde si después se guardan los goles de esa
+ * misma fecha.
+ */
+export function corregirResultado(
+  token: string,
+  partidoId: number,
+  golesA: number,
+  golesB: number,
+): Promise<void> {
+  return rpc('corregir_resultado', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles_a: golesA,
+    p_goles_b: golesB,
+  })
+}
+
 export function finalizarPartido(token: string, partidoId: number): Promise<void> {
   return rpc('finalizar_partido', { p_token: token, p_partido_id: partidoId })
 }

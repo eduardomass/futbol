@@ -102,6 +102,10 @@ no un voto que haya que congelar. Y **arman el marcador**: al guardarlos,
 completo. Si el partido entero suma cero, el resultado no se toca —un plantel en cero es
 «no cargué nada», no un 0-0— y ese caso se carga con `cargar_resultado`.
 
+El **admin** puede saltarse el «solo en curso» del resultado con `corregir_resultado`, que
+cambia el marcador en cualquier estado. Si después se guardan los goles por jugador de esa
+fecha, el recálculo pisa la corrección.
+
 Un partido se puede borrar en cualquier estado con `eliminar_partido` (solo admin), y se
 lleva su plantel y sus puntajes.
 
@@ -151,6 +155,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `cargar_resultado(…, p_goles_a, p_goles_b)` | Solo en `en_curso`. Carga el marcador a mano; la vía normal es `guardar_goles`. |
 | `guardar_goles(p_token, p_partido_id, p_goles)` | `p_goles` es `[{jugador_id, goles}]`. Atribuye los goles y **recalcula el marcador** con la suma de cada equipo sobre el plantel completo; si todo suma cero, lo deja como estaba. Partido en `en_curso` o `finalizado`, cualquier sesión válida. Acepta cargas parciales y reenviar corrige. Devuelve cuántas filas tocó. |
 | `finalizar_partido(…)` | Exige resultado cargado. |
+| `corregir_resultado(p_token, p_partido_id, p_goles_a, p_goles_b)` | **Solo admin.** Cambia el marcador en **cualquier estado**, sin el «solo en curso» de `cargar_resultado`. Es la vía para arreglar una fecha ya finalizada. |
 | `eliminar_partido(p_token, p_partido_id)` | **Solo admin.** Borra la fecha; el `on delete cascade` se lleva plantel y puntajes. Devuelve `fecha, estado, jugadores, puntajes` de lo que borró. |
 
 ### Puntajes

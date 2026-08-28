@@ -6,6 +6,7 @@ import Estadisticas from '@/pages/Estadisticas'
 import Jugadores from '@/pages/Jugadores'
 import Login from '@/pages/Login'
 import Partido from '@/pages/Partido'
+import Partidos from '@/pages/Partidos'
 import { sesionActual } from '@/lib/api'
 import { borrarSesion, guardarSesion, leerSesion } from '@/lib/session'
 import type { Sesion } from '@/types'
@@ -69,6 +70,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout sesion={sesion} onLogout={() => setSesion(null)} />}>
         <Route path="/" element={<Dashboard sesion={sesion} />} />
+        <Route path="/partidos" element={<Partidos sesion={sesion} />} />
         <Route path="/jugadores" element={<Jugadores sesion={sesion} />} />
         <Route path="/estadisticas" element={<Estadisticas sesion={sesion} />} />
         <Route path="/partido/:id" element={<Partido sesion={sesion} />} />

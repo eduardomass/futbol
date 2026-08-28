@@ -10,6 +10,7 @@ type LayoutProps = {
 
 const enlaces = [
   { to: '/', label: 'Inicio', end: true },
+  { to: '/partidos', label: 'Partidos', end: false },
   { to: '/jugadores', label: 'Jugadores', end: false },
   { to: '/estadisticas', label: 'Estadísticas', end: false },
 ]

@@ -4,6 +4,7 @@ import {
   agregarJugadorPartido,
   cargarResultado,
   comenzarPartido,
+  corregirResultado,
   eliminarPartido,
   finalizarPartido,
   guardarGoles,
@@ -42,6 +43,10 @@ export default function Partido({ sesion }: PartidoProps) {
   /** Goles de cada jugador, por jugador_id. Se editan como texto para poder vaciar el input. */
   const [golesJugador, setGolesJugador] = useState<Record<number, string>>({})
   const [avisoGoles, setAvisoGoles] = useState<string | null>(null)
+  /** Formulario de corrección del admin, separado del de carga normal. */
+  const [correccionA, setCorreccionA] = useState('')
+  const [correccionB, setCorreccionB] = useState('')
+  const [avisoCorreccion, setAvisoCorreccion] = useState<string | null>(null)
   const [puntajes, setPuntajes] = useState<Record<number, number>>({})
   const [avisoPuntajes, setAvisoPuntajes] = useState<string | null>(null)
 
@@ -60,6 +65,8 @@ export default function Partido({ sesion }: PartidoProps) {
       setGolesA(p?.goles_a?.toString() ?? '')
       setGolesB(p?.goles_b?.toString() ?? '')
       setGolesJugador(Object.fromEntries(pl.map(x => [x.jugador_id, String(x.goles ?? 0)])))
+      setCorreccionA(p?.goles_a?.toString() ?? '')
+      setCorreccionB(p?.goles_b?.toString() ?? '')
 
       if (p?.estado === 'finalizado' && p.soy_participante) {
         const mios = await misPuntajes(sesion.token, partidoId)
@@ -567,6 +574,77 @@ No se puede deshacer.`,
             plantel={plantel}
             onGuardado={() => void cargar()}
           />
+        </section>
+      )}
+
+      {/* --- Corregir el resultado (solo administradores, en cualquier estado) --- */}
+      {sesion.esAdmin && (
+        <section className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Corregir el resultado</h2>
+            <span className="rounded border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-300">
+              administrador
+            </span>
+          </div>
+          <p className="text-sm text-slate-400">
+            Cambia el marcador de esta fecha en cualquier momento, sin el «solo con el partido en
+            curso» de la carga normal. Ojo con una cosa: si después alguien guarda los goles por
+            jugador, el marcador vuelve a salir de esa suma y se pierde la corrección.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-end gap-4">
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">Goles equipo A</span>
+              <input
+                type="number"
+                min={0}
+                value={correccionA}
+                onChange={e => {
+                  setCorreccionA(e.target.value)
+                  setAvisoCorreccion(null)
+                }}
+                className="w-28 rounded-lg border border-white/10 bg-black/30 px-4 py-2.5 text-white outline-none focus:border-emerald-400/60"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-300">Goles equipo B</span>
+              <input
+                type="number"
+                min={0}
+                value={correccionB}
+                onChange={e => {
+                  setCorreccionB(e.target.value)
+                  setAvisoCorreccion(null)
+                }}
+                className="w-28 rounded-lg border border-white/10 bg-black/30 px-4 py-2.5 text-white outline-none focus:border-emerald-400/60"
+              />
+            </label>
+            <button
+              disabled={ocupado || correccionA === '' || correccionB === ''}
+              onClick={() =>
+                accion(async () => {
+                  await corregirResultado(
+                    sesion.token,
+                    partidoId,
+                    Number(correccionA),
+                    Number(correccionB),
+                  )
+                  setAvisoCorreccion(
+                    `Resultado corregido: ${Number(correccionA)} - ${Number(correccionB)}.`,
+                  )
+                })
+              }
+              className="rounded-lg bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Guardar corrección
+            </button>
+          </div>
+
+          {avisoCorreccion && (
+            <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              {avisoCorreccion}
+            </p>
+          )}
         </section>
       )}
 

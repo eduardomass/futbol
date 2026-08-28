@@ -347,6 +347,36 @@ try {
     'un jugador repetido en la misma carga de goles',
   )
 
+  // ============ corrección del resultado (solo admin) ============
+  // `cargar_resultado` solo acepta el partido en curso; con la fecha ya
+  // finalizada, la única vía es `corregir_resultado`.
+  await debeFallar(
+    'cargar_resultado',
+    { p_token: token, p_partido_id: partidoId, p_goles_a: 7, p_goles_b: 3 },
+    'cargar_resultado con el partido ya finalizado',
+  )
+  await rpc('corregir_resultado', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_goles_a: 7,
+    p_goles_b: 3,
+  })
+  const [corregido] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    corregido.goles_a === 7 && corregido.goles_b === 3,
+    `corregir_resultado cambia el marcador de una fecha finalizada (${corregido.goles_a}-${corregido.goles_b})`,
+  )
+  await debeFallar(
+    'corregir_resultado',
+    { p_token: token, p_partido_id: partidoId, p_goles_a: -1, p_goles_b: 0 },
+    'corregir con goles negativos',
+  )
+  await debeFallar(
+    'corregir_resultado',
+    { p_token: token, p_partido_id: 999999, p_goles_a: 1, p_goles_b: 0 },
+    'corregir una fecha que no existe',
+  )
+
   // ============ puntajes del propio jugador ============
   await debeFallar(
     'guardar_puntajes',
@@ -529,6 +559,12 @@ try {
     p_clave: null,
     p_es_admin: true,
   })
+  await debeFallar(
+    'corregir_resultado',
+    { p_token: tokenComun, p_partido_id: partidoId, p_goles_a: 9, p_goles_b: 9 },
+    'jugador común corrigiendo el resultado',
+  )
+
   const [suFila] = await rpc('mi_jugador', { p_token: tokenComun })
   ok(
     suFila?.id === creados[1] && suFila?.apodo === 'bru',
@@ -576,6 +612,24 @@ try {
       p_celdas: [{ autor_id: todos[0], jugador_id: todos[1], puntaje: 7 }],
     })) === 1,
     'la grilla del admin sigue abierta aunque la fecha esté cerrada',
+  )
+
+  // El admin corrige el resultado en cualquier estado, incluso programado.
+  await rpc('corregir_resultado', {
+    p_token: token,
+    p_partido_id: partidoPosterior,
+    p_goles_a: 2,
+    p_goles_b: 1,
+  })
+  const [posteriorConResultado] = await rpc('obtener_partido', {
+    p_token: token,
+    p_partido_id: partidoPosterior,
+  })
+  ok(
+    posteriorConResultado.estado === 'programado' &&
+      posteriorConResultado.goles_a === 2 &&
+      posteriorConResultado.goles_b === 1,
+    'corregir_resultado también funciona con la fecha en programado',
   )
 
   // ============ eliminar una fecha (solo admin) ============

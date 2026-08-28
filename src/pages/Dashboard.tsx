@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BlurText from '@/components/BlurText'
+import ListaFechas from '@/components/ListaFechas'
 import SplitFlapText from '@/components/SplitFlapText'
 import { crearPartido, estadisticas, listarPartidos, misPartidos, proximoJueves } from '@/lib/api'
-import {
-  COLOR_ESTADO,
-  ETIQUETA_ESTADO,
-  formatearFecha,
-  formatearFechaCorta,
-  formatearPromedio,
-} from '@/lib/formato'
+import { formatearFecha, formatearFechaCorta, formatearPromedio } from '@/lib/formato'
 import type { Estadisticas, MiPartido, PartidoResumen, Sesion } from '@/types'
 
 type DashboardProps = {
@@ -206,39 +201,16 @@ export default function Dashboard({ sesion }: DashboardProps) {
 
       {/* --- Todas las fechas --- */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-white">Todas las fechas</h2>
-        {todos.length === 0 ? (
-          <p className="rounded-xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
-            No hay fechas cargadas. Creá la primera con «Empezar fecha».
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {todos.map(p => (
-              <li key={p.id}>
-                <Link
-                  to={`/partido/${p.id}`}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/10 bg-white/5 px-5 py-4 transition hover:border-white/25"
-                >
-                  <span className="font-medium text-white">{formatearFechaCorta(p.fecha)}</span>
-                  <span
-                    className={`rounded-md border px-2 py-0.5 text-xs ${COLOR_ESTADO[p.estado]}`}
-                  >
-                    {ETIQUETA_ESTADO[p.estado]}
-                  </span>
-                  {p.goles_a !== null && (
-                    <span className="font-mono text-slate-300">
-                      {p.goles_a} - {p.goles_b}
-                    </span>
-                  )}
-                  <span className="text-sm text-slate-400">{p.jugadores}/10 jugadores</span>
-                  <span className="ml-auto text-sm text-slate-400">
-                    Promedio fecha: {formatearPromedio(p.promedio)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-white">Todas las fechas</h2>
+          <Link to="/partidos" className="ml-auto text-sm text-emerald-400 hover:underline">
+            Ver en Partidos →
+          </Link>
+        </div>
+        <ListaFechas
+          partidos={todos}
+          vacio="No hay fechas cargadas. Creá la primera con «Empezar fecha»."
+        />
       </section>
     </div>
   )

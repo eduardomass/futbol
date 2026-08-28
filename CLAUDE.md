@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 83 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 89 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -66,6 +66,7 @@ Qué puede cada uno (migración `0007`, validado en la base, no solo en la panta
 | Editar datos de otro jugador | sí | no, solo los propios |
 | Cambiar el flag `es_admin` | sí | no — se ignora lo que manda el cliente |
 | Grilla de puntajes de una fecha | sí | no |
+| Corregir el marcador en cualquier estado | sí | no |
 
 Un jugador común ve en `/jugadores` solo su ficha, que trae `mi_jugador(p_token)`.
 `listar_jugadores` sigue abierta a todos porque se necesita para armar el plantel.
@@ -88,8 +89,18 @@ Dos detalles que importan:
 Se cargan con el partido en `en_curso` o `finalizado`, desde cualquier sesión válida, y
 sin el cierre por fecha posterior que tienen los puntajes: un gol es un hecho del
 partido, no un voto. Ojo con la contracara: al ser el marcador la suma de los goleadores,
-**no hay lugar para un gol en contra** — si aparece, hay que corregir con
-`cargar_resultado` después de guardar los goles.
+**no hay lugar para un gol en contra** — si aparece, hay que corregir el marcador después
+de guardar los goles.
+
+Para eso está `corregir_resultado(p_token, p_partido_id, p_goles_a, p_goles_b)`
+(migración `0014`, **solo admin**): cambia el marcador **en cualquier estado**, incluso con
+la fecha finalizada, que es donde `cargar_resultado` ya no acepta. Mismo criterio que
+`guardar_grilla_puntajes` frente a `guardar_puntajes`: la función del ciclo de vida respeta
+el ciclo de vida, y el admin tiene una puerta aparte para corregir.
+
+**El orden importa**: `guardar_goles` recalcula el marcador, así que una corrección a mano
+se pierde si después alguien guarda los goles de esa misma fecha. Primero los goles,
+después la corrección. La pantalla lo avisa.
 
 ### Jugador del partido: se cuenta por planilla, no por promedio
 
@@ -133,7 +144,7 @@ antes de crearlo.
 
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0013_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0014_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,
