@@ -124,6 +124,23 @@ No se puede deshacer.`,
   const equipoB = useMemo(() => plantel.filter(p => p.equipo === 'B'), [plantel])
   const completo = equipoA.length === 5 && equipoB.length === 5
 
+  /**
+   * El jugador del partido es el que más planillas pusieron como su mejor
+   * puntaje, y el peor el que más pusieron como el más bajo. Si empatan,
+   * quedan marcados todos los empatados: con diez votantes pasa seguido.
+   */
+  const destacados = useMemo(() => {
+    const maximo = (campo: 'mejores' | 'peores') =>
+      plantel.reduce((m, p) => Math.max(m, p[campo] ?? 0), 0)
+
+    const elegidos = (campo: 'mejores' | 'peores') => {
+      const tope = maximo(campo)
+      return tope === 0 ? [] : plantel.filter(p => (p[campo] ?? 0) === tope)
+    }
+
+    return { mejores: elegidos('mejores'), peores: elegidos('peores') }
+  }, [plantel])
+
   /** Lo que suman los goles individuales que hay ahora en el formulario. */
   function sumaGoles(items: PlantelItem[]): number {
     return items.reduce((total, p) => total + (Number(golesJugador[p.jugador_id]) || 0), 0)
@@ -193,6 +210,27 @@ No se puede deshacer.`,
           ocupado={ocupado}
         />
       </section>
+
+      {/* --- Jugador y peor del partido, según las planillas --- */}
+      {partido.estado === 'finalizado' &&
+        (destacados.mejores.length > 0 || destacados.peores.length > 0) && (
+          <section className="grid gap-4 md:grid-cols-2">
+            <Destacado
+              titulo="Jugador del partido"
+              icono="🏆"
+              items={destacados.mejores}
+              campo="mejores"
+              tono="emerald"
+            />
+            <Destacado
+              titulo="Peor del partido"
+              icono="👎"
+              items={destacados.peores}
+              campo="peores"
+              tono="red"
+            />
+          </section>
+        )}
 
       {/* --- Armado del plantel (solo programado) --- */}
       {partido.estado === 'programado' && (
@@ -598,9 +636,27 @@ function Equipo({
                 </span>
               )}
               {estado === 'finalizado' && (
-                <span className="ml-auto text-slate-400">
-                  {formatearPromedio(p.promedio)}
-                  <span className="ml-1 text-xs text-slate-600">({p.votos})</span>
+                <span className="ml-auto flex items-center gap-2 text-slate-400">
+                  {p.mejores > 0 && (
+                    <span
+                      title={`${p.mejores} ${p.mejores === 1 ? 'planilla lo puso' : 'planillas lo pusieron'} como su mejor puntaje`}
+                      className="text-xs text-emerald-300"
+                    >
+                      ⭐ {p.mejores}
+                    </span>
+                  )}
+                  {p.peores > 0 && (
+                    <span
+                      title={`${p.peores} ${p.peores === 1 ? 'planilla lo puso' : 'planillas lo pusieron'} como su peor puntaje`}
+                      className="text-xs text-red-300"
+                    >
+                      👎 {p.peores}
+                    </span>
+                  )}
+                  <span>
+                    {formatearPromedio(p.promedio)}
+                    <span className="ml-1 text-xs text-slate-600">({p.votos})</span>
+                  </span>
                 </span>
               )}
               {estado === 'programado' && (
@@ -672,6 +728,54 @@ function ColumnaGoles({
         </ul>
       )}
 
+    </div>
+  )
+}
+
+/** «Ana», «Ana y Bruno», «Ana, Bruno y Carlos». */
+function enumerar(nombres: string[]): string {
+  if (nombres.length <= 1) return nombres[0] ?? ''
+  return `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`
+}
+
+/**
+ * El jugador del partido o el peor: quién juntó más planillas con su puntaje
+ * más alto (o más bajo). Si hay empate se muestran todos, porque con diez
+ * votantes empatar en dos o tres es lo normal.
+ */
+function Destacado({
+  titulo,
+  icono,
+  items,
+  campo,
+  tono,
+}: {
+  titulo: string
+  icono: string
+  items: PlantelItem[]
+  campo: 'mejores' | 'peores'
+  tono: 'emerald' | 'red'
+}) {
+  if (items.length === 0) return null
+
+  const veces = items[0][campo] ?? 0
+  const marco =
+    tono === 'emerald' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'
+  const acento = tono === 'emerald' ? 'text-emerald-300' : 'text-red-300'
+
+  return (
+    <div className={`rounded-xl border p-5 ${marco}`}>
+      <p className={`text-xs uppercase tracking-wide ${acento}`}>
+        {icono} {titulo}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-white">
+        {enumerar(items.map(p => `${nombreCorto(p)} ${p.apellido}`))}
+      </p>
+      <p className="mt-1 text-sm text-slate-400">
+        {veces === 1 ? '1 planilla lo eligió' : `${veces} planillas lo eligieron`} como su{' '}
+        {campo === 'mejores' ? 'mejor' : 'peor'} puntaje de la fecha
+        {items.length > 1 && ', empatados'}.
+      </p>
     </div>
   )
 }

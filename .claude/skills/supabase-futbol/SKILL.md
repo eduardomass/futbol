@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0011`.
+Migraciones aplicadas: `0001` … `0012`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -103,6 +103,17 @@ plantel en cero es «no cargué nada», no un 0-0. Contracara: el marcador es la
 los goleadores, así que un gol en contra no se puede representar — se corrige con
 `cargar_resultado` después.
 
+### Mejor y peor puntaje de cada planilla
+
+`plantel_partido` devuelve `mejores` y `peores` (migración `0012`): cuántas planillas
+de la fecha pusieron al jugador como su puntaje más alto y como su más bajo. El jugador
+del partido es el de más `mejores`, el peor el de más `peores`, y esa elección la hace
+la pantalla.
+
+Un empate dentro de una planilla cuenta para todos los empatados. Y una planilla plana
+—el mismo puntaje para los diez— no elige a nadie: el `having max > min` la descarta,
+porque si no los diez jugadores se llevaban un `mejores` y un `peores` de esa planilla.
+
 ### Orden de los listados
 
 `listar_jugadores` y `plantel_partido` ordenan **por nombre**, no por apellido — es lo
@@ -130,7 +141,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(76 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(81 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:

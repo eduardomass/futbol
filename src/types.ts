@@ -57,6 +57,10 @@ export type PlantelItem = {
   votos: number
   /** Goles que hizo en ese partido. Arranca en 0, nunca queda en null. */
   goles: number
+  /** Cuántas planillas de esa fecha lo pusieron como su puntaje más alto. */
+  mejores: number
+  /** Cuántas planillas de esa fecha lo pusieron como su puntaje más bajo. */
+  peores: number
 }
 
 export type Estadisticas = {

@@ -412,6 +412,54 @@ try {
     'celda con un autor que no jugó el partido',
   )
 
+  // ============ mejor y peor puntaje de cada planilla ============
+  // Las dos planillas cargadas hasta acá son planas (una toda 9, la otra toda
+  // 7): un autor que puntúa igual a todos no elige mejor ni peor a nadie.
+  const planas = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    planas.every(p => p.mejores === 0 && p.peores === 0),
+    'una planilla con el mismo puntaje para todos no elige mejor ni peor',
+  )
+
+  // Ahora una planilla que sí distingue: 10 al primero, 1 al último.
+  await rpc('guardar_grilla_puntajes', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_celdas: [
+      { autor_id: otro, jugador_id: todos[0], puntaje: 10 },
+      { autor_id: otro, jugador_id: todos[9], puntaje: 1 },
+    ],
+  })
+  const conDestacados = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
+  const elMejor = conDestacados.find(p => p.jugador_id === todos[0])
+  const elPeor = conDestacados.find(p => p.jugador_id === todos[9])
+  ok(
+    elMejor.mejores === 1 && elMejor.peores === 0,
+    `el máximo de una planilla cuenta como mejor puntaje (${elMejor.mejores})`,
+  )
+  ok(
+    elPeor.peores === 1 && elPeor.mejores === 0,
+    `el mínimo de una planilla cuenta como peor puntaje (${elPeor.peores})`,
+  )
+  ok(
+    conDestacados
+      .filter(p => p.jugador_id !== todos[0] && p.jugador_id !== todos[9])
+      .every(p => p.mejores === 0 && p.peores === 0),
+    'los del medio de la planilla no cuentan ni como mejor ni como peor',
+  )
+
+  // Empate dentro de una planilla: si el máximo lo comparten dos, cuenta a los dos.
+  await rpc('guardar_grilla_puntajes', {
+    p_token: token,
+    p_partido_id: partidoId,
+    p_celdas: [{ autor_id: otro, jugador_id: todos[1], puntaje: 10 }],
+  })
+  const conEmpate = await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    conEmpate.filter(p => p.mejores === 1).length === 2,
+    'un empate en el máximo de la planilla cuenta para los dos empatados',
+  )
+
   // un jugador común NO puede ver ni tocar la grilla
   const loginComun = await rpc('iniciar_sesion', {
     p_email: 'e2e2@prueba.local',

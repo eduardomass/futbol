@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 76 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 81 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -90,6 +90,24 @@ sin el cierre por fecha posterior que tienen los puntajes: un gol es un hecho de
 partido, no un voto. Ojo con la contracara: al ser el marcador la suma de los goleadores,
 **no hay lugar para un gol en contra** — si aparece, hay que corregir con
 `cargar_resultado` después de guardar los goles.
+
+### Jugador del partido: se cuenta por planilla, no por promedio
+
+`plantel_partido` devuelve `mejores` y `peores`: cuántas planillas de esa fecha pusieron
+al jugador como su puntaje **más alto** y como su **más bajo**. El que más `mejores`
+junta es el jugador del partido; el que más `peores`, el peor. La elección la hace la
+pantalla (`Partido.tsx`, memo `destacados`), que ya tiene el plantel entero.
+
+Dos reglas del conteo, en la migración `0012`:
+
+- **Un empate dentro de una planilla cuenta para todos los empatados.** Si un autor puso
+  8 como máximo y se lo dio a tres, los tres se llevan un `mejores`.
+- **Una planilla plana no elige a nadie.** Si un autor puntuó igual a los diez, su máximo
+  es también su mínimo: no está diciendo quién fue el mejor. El `having max > min` la
+  descarta. Sin eso, los diez se llevaban un `mejores` y un `peores` de esa planilla.
+
+Los empates en el total también se muestran completos: con diez votantes, empatar en dos
+o tres es lo normal.
 
 ### Los puntajes se cierran con la fecha siguiente
 

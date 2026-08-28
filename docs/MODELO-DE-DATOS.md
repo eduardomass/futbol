@@ -144,7 +144,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `crear_partido(p_token, p_fecha)` | `p_fecha` en null usa `proximo_jueves()`. |
 | `listar_partidos(p_token)` | Todas las fechas con cantidad de jugadores y promedio. |
 | `obtener_partido(p_token, p_partido_id)` | Detalle + `promedio_fecha`, `soy_participante`, `ya_puntue` y `puntajes_cerrados` (true si existe algún partido con fecha posterior). |
-| `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio, cantidad de votos y `goles`. Ordenado por equipo y después **por nombre**. |
+| `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio, cantidad de votos, `goles`, `mejores` y `peores`. Ordenado por equipo y después **por nombre**. |
 | `agregar_jugador_partido(…, p_equipo)` | Solo en `programado`; rechaza el 6º del equipo y los repetidos. |
 | `quitar_jugador_partido(…)` | Solo en `programado`. |
 | `comenzar_partido(…)` | Exige exactamente 5 y 5. |
@@ -190,3 +190,25 @@ celda vacía no es un cero: no hay fila, así que no entra en el promedio ni en 
 | `estadisticas.promedio_general` | Todos los votos que recibió el jugador en toda su historia. |
 | `estadisticas_jugadores.promedio_general` | Lo mismo, para cada jugador del grupo. |
 | Grilla (fila «Promedio») | Se calcula en el navegador sobre las celdas no vacías de la columna. |
+
+## Mejor y peor puntaje de cada planilla
+
+`plantel_partido` devuelve, además del promedio, dos conteos por jugador (migración
+`0012`):
+
+| campo | qué cuenta |
+|---|---|
+| `mejores` | Cuántas planillas de esa fecha lo pusieron como su puntaje más alto. |
+| `peores`  | Cuántas lo pusieron como su puntaje más bajo. |
+
+El que más `mejores` junta es el **jugador del partido**; el que más `peores`, el **peor
+del partido**. Esa elección la hace la pantalla, no la base.
+
+Reglas del conteo:
+
+- Un **empate dentro de una planilla** cuenta para todos los empatados: un autor que le
+  puso su máximo a tres jugadores les da un `mejores` a los tres.
+- Una **planilla plana no elige a nadie**: si un autor puntuó igual a los diez, su máximo
+  es también su mínimo, así que no cuenta (`having max(puntaje) > min(puntaje)`).
+- Una **planilla incompleta** se mide contra los puntajes que sí tiene: las celdas vacías
+  no existen como fila.
