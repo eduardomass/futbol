@@ -377,6 +377,62 @@ try {
     'corregir una fecha que no existe',
   )
 
+  // ============ reabrir la fecha (solo admin) ============
+  // El ciclo de vida va para atrás de a un estado, para arreglar una fecha
+  // finalizada por error. Acá se reabre entera y se restaura, porque los
+  // puntajes de más abajo necesitan la fecha finalizada.
+  const [aEnCurso] = await rpc('reabrir_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    aEnCurso.estado_anterior === 'finalizado' && aEnCurso.estado_nuevo === 'en_curso',
+    'reabrir_partido vuelve de finalizado a en_curso',
+  )
+  const [fechaReabierta] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    fechaReabierta.estado === 'en_curso' &&
+      fechaReabierta.goles_a === 7 &&
+      fechaReabierta.goles_b === 3,
+    'la fecha reabierta conserva el marcador',
+  )
+  ok(
+    (await rpc('plantel_partido', { p_token: token, p_partido_id: partidoId })).length === 10,
+    'la fecha reabierta conserva el plantel',
+  )
+  await debeFallar(
+    'guardar_puntajes',
+    {
+      p_token: token,
+      p_partido_id: partidoId,
+      p_puntajes: todos.map(jid => ({ jugador_id: jid, puntaje: 6 })),
+    },
+    'puntajes de una fecha reabierta',
+  )
+
+  const [aProgramado] = await rpc('reabrir_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    aProgramado.estado_anterior === 'en_curso' && aProgramado.estado_nuevo === 'programado',
+    'reabrir_partido otra vez vuelve de en_curso a programado',
+  )
+  await debeFallar(
+    'reabrir_partido',
+    { p_token: token, p_partido_id: partidoId },
+    'reabrir una fecha que ya está programada',
+  )
+  await debeFallar(
+    'reabrir_partido',
+    { p_token: token, p_partido_id: 999999 },
+    'reabrir una fecha que no existe',
+  )
+
+  // La dejo finalizada otra vez: el marcador quedó cargado, así que
+  // `finalizar_partido` acepta sin volver a pasar por `cargar_resultado`.
+  await rpc('comenzar_partido', { p_token: token, p_partido_id: partidoId })
+  await rpc('finalizar_partido', { p_token: token, p_partido_id: partidoId })
+  const [refinalizado] = await rpc('obtener_partido', { p_token: token, p_partido_id: partidoId })
+  ok(
+    refinalizado.estado === 'finalizado' && refinalizado.goles_a === 7,
+    'la fecha se vuelve a finalizar sin recargar el resultado',
+  )
+
   // ============ puntajes del propio jugador ============
   await debeFallar(
     'guardar_puntajes',
@@ -563,6 +619,12 @@ try {
     'corregir_resultado',
     { p_token: tokenComun, p_partido_id: partidoId, p_goles_a: 9, p_goles_b: 9 },
     'jugador común corrigiendo el resultado',
+  )
+
+  await debeFallar(
+    'reabrir_partido',
+    { p_token: tokenComun, p_partido_id: partidoId },
+    'jugador común reabriendo una fecha',
   )
 
   const [suFila] = await rpc('mi_jugador', { p_token: tokenComun })

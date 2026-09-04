@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 89 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 97 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -67,6 +67,7 @@ Qué puede cada uno (migración `0007`, validado en la base, no solo en la panta
 | Cambiar el flag `es_admin` | sí | no — se ignora lo que manda el cliente |
 | Grilla de puntajes de una fecha | sí | no |
 | Corregir el marcador en cualquier estado | sí | no |
+| Reabrir una fecha (un estado atrás) | sí | no |
 
 Un jugador común ve en `/jugadores` solo su ficha, que trae `mi_jugador(p_token)`.
 `listar_jugadores` sigue abierta a todos porque se necesita para armar el plantel.
@@ -101,6 +102,27 @@ el ciclo de vida, y el admin tiene una puerta aparte para corregir.
 **El orden importa**: `guardar_goles` recalcula el marcador, así que una corrección a mano
 se pierde si después alguien guarda los goles de esa misma fecha. Primero los goles,
 después la corrección. La pantalla lo avisa.
+
+### El ciclo de vida también va para atrás
+
+`programado` → `en_curso` → `finalizado` solo iba para adelante, y una fecha finalizada
+por error no tenía arreglo desde la app: el resultado ya no se carga, el plantel ya no se
+edita, y la fecha entra en las estadísticas como jugada. La única salida era un `update` a
+mano, o borrarla con `eliminar_partido` y perder plantel y puntajes. Pasó de verdad con la
+fecha del 3/9/2026.
+
+`reabrir_partido(p_token, p_partido_id)` (migración `0015`, **solo admin**) es la vuelta
+atrás, **un estado por llamada**: `finalizado` → `en_curso` para volver a tocar el
+resultado, `en_curso` → `programado` para volver a armar los equipos. Devuelve
+`estado_anterior` y `estado_nuevo`; con la fecha ya en `programado` falla, porque no hay
+estado anterior. Un paso y no dos a propósito: en `programado` el plantel se puede editar,
+y quitar a un jugador borra la fila con los goles que tenía.
+
+No borra nada —marcador, plantel, goles y puntajes quedan donde están, así que
+`finalizar_partido` vuelve a aceptar sin recargar—, pero mientras la fecha esté reabierta
+`guardar_puntajes` no acepta cargas nuevas y la fecha **sale de las estadísticas**, que
+solo cuentan partidos finalizados. El botón está en la pantalla de la fecha y avisa las dos
+cosas antes de confirmar.
 
 ### Jugador del partido: se cuenta por planilla, no por promedio
 
@@ -144,7 +166,7 @@ antes de crearlo.
 
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0014_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0015_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,

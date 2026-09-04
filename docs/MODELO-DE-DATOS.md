@@ -90,6 +90,9 @@ programado ──comenzar_partido──> en_curso ──finalizar_partido──>
    │                                 │                               │
  plantel                        resultado                        puntajes
  editable                       editable                         editables
+
+programado <──reabrir_partido── en_curso <──reabrir_partido── finalizado
+                (solo admin)                 (solo admin)
 ```
 
 Las tres restricciones las hace cumplir Postgres, no la pantalla: no se pueden saltear
@@ -105,6 +108,12 @@ completo. Si el partido entero suma cero, el resultado no se toca —un plantel 
 El **admin** puede saltarse el «solo en curso» del resultado con `corregir_resultado`, que
 cambia el marcador en cualquier estado. Si después se guardan los goles por jugador de esa
 fecha, el recálculo pisa la corrección.
+
+El ciclo también **va para atrás**, pero solo para el admin: `reabrir_partido` vuelve un
+estado por llamada —`finalizado` a `en_curso`, `en_curso` a `programado`— para cuando una
+fecha se finalizó por error. No borra el marcador ni los puntajes ya cargados: mientras la
+fecha esté reabierta `guardar_puntajes` no acepta cargas nuevas y la fecha no cuenta en
+`estadisticas_jugadores`, y al finalizarla otra vez todo vuelve a aparecer.
 
 Un partido se puede borrar en cualquier estado con `eliminar_partido` (solo admin), y se
 lleva su plantel y sus puntajes.
@@ -156,6 +165,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `guardar_goles(p_token, p_partido_id, p_goles)` | `p_goles` es `[{jugador_id, goles}]`. Atribuye los goles y **recalcula el marcador** con la suma de cada equipo sobre el plantel completo; si todo suma cero, lo deja como estaba. Partido en `en_curso` o `finalizado`, cualquier sesión válida. Acepta cargas parciales y reenviar corrige. Devuelve cuántas filas tocó. |
 | `finalizar_partido(…)` | Exige resultado cargado. |
 | `corregir_resultado(p_token, p_partido_id, p_goles_a, p_goles_b)` | **Solo admin.** Cambia el marcador en **cualquier estado**, sin el «solo en curso» de `cargar_resultado`. Es la vía para arreglar una fecha ya finalizada. |
+| `reabrir_partido(p_token, p_partido_id)` | **Solo admin.** Vuelve un estado atrás: `finalizado` → `en_curso` → `programado`. No toca marcador, plantel, goles ni puntajes. Devuelve `estado_anterior, estado_nuevo`. Rechaza una fecha ya en `programado`. |
 | `eliminar_partido(p_token, p_partido_id)` | **Solo admin.** Borra la fecha; el `on delete cascade` se lleva plantel y puntajes. Devuelve `fecha, estado, jugadores, puntajes` de lo que borró. |
 
 ### Puntajes

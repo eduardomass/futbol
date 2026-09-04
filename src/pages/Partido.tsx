@@ -14,6 +14,7 @@ import {
   obtenerPartido,
   plantelPartido,
   quitarJugadorPartido,
+  reabrirPartido,
 } from '@/lib/api'
 import GrillaPuntajes from '@/components/GrillaPuntajes'
 import { COLOR_ESTADO, ETIQUETA_ESTADO, formatearFecha, formatearPromedio } from '@/lib/formato'
@@ -47,6 +48,7 @@ export default function Partido({ sesion }: PartidoProps) {
   const [correccionA, setCorreccionA] = useState('')
   const [correccionB, setCorreccionB] = useState('')
   const [avisoCorreccion, setAvisoCorreccion] = useState<string | null>(null)
+  const [avisoReapertura, setAvisoReapertura] = useState<string | null>(null)
   const [puntajes, setPuntajes] = useState<Record<number, number>>({})
   const [avisoPuntajes, setAvisoPuntajes] = useState<string | null>(null)
 
@@ -125,6 +127,33 @@ No se puede deshacer.`,
       setError(err instanceof Error ? err.message : 'No se pudo eliminar la fecha.')
       setOcupado(false)
     }
+  }
+
+  /**
+   * Vuelve un estado atrás en el ciclo de vida: `finalizado` → `en_curso` →
+   * `programado`. Solo admin, y con confirmación, porque cambia lo que la
+   * fecha deja hacer: los puntajes se cierran, el plantel se reabre.
+   */
+  async function reabrirFecha() {
+    if (!partido) return
+
+    const detalle =
+      partido.estado === 'finalizado'
+        ? 'Vuelve a «En curso»: se pueden corregir el resultado y los goles.\n\nEl marcador y los puntajes ya cargados no se borran, pero mientras la fecha esté reabierta nadie puede cargar puntajes nuevos y no cuenta en las estadísticas.'
+        : 'Vuelve a «Programado»: se puede volver a armar los equipos.\n\nOjo: al quitar a un jugador del plantel se borran los goles que tenía cargados.'
+
+    if (!window.confirm(`¿Reabrir la fecha del ${formatearFecha(partido.fecha)}?\n\n${detalle}`)) {
+      return
+    }
+
+    await accion(async () => {
+      const r = await reabrirPartido(sesion.token, partidoId)
+      setAvisoReapertura(
+        r
+          ? `Fecha reabierta: pasó de «${ETIQUETA_ESTADO[r.estado_anterior]}» a «${ETIQUETA_ESTADO[r.estado_nuevo]}».`
+          : null,
+      )
+    })
   }
 
   const equipoA = useMemo(() => plantel.filter(p => p.equipo === 'A'), [plantel])
@@ -643,6 +672,48 @@ No se puede deshacer.`,
           {avisoCorreccion && (
             <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
               {avisoCorreccion}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* --- Reabrir la fecha (solo administradores) --- */}
+      {sesion.esAdmin && (
+        <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Reabrir la fecha</h2>
+            <span className="rounded border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-300">
+              administrador
+            </span>
+          </div>
+
+          {partido.estado === 'programado' ? (
+            <p className="text-sm text-slate-400">
+              Esta fecha está en «Programado», el primer estado del ciclo: no hay nada que
+              reabrir. El plantel ya se puede editar.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-400">
+                {partido.estado === 'finalizado'
+                  ? 'Vuelve la fecha a «En curso», para cuando se finalizó por error. El marcador y los puntajes cargados quedan como están; mientras esté reabierta no se pueden cargar puntajes nuevos y la fecha no cuenta en las estadísticas.'
+                  : 'Vuelve la fecha a «Programado», para volver a armar los equipos. Al quitar a un jugador del plantel se borran los goles que tenía cargados.'}
+              </p>
+              <button
+                disabled={ocupado}
+                onClick={reabrirFecha}
+                className="mt-4 rounded-lg border border-amber-500/40 px-5 py-2.5 text-sm text-amber-300 transition hover:border-amber-500/70 hover:text-amber-200 disabled:opacity-40"
+              >
+                {partido.estado === 'finalizado'
+                  ? 'Reabrir: volver a «En curso»'
+                  : 'Reabrir: volver a «Programado»'}
+              </button>
+            </>
+          )}
+
+          {avisoReapertura && (
+            <p className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              {avisoReapertura}
             </p>
           )}
         </section>

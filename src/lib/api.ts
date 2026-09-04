@@ -241,6 +241,24 @@ export function finalizarPartido(token: string, partidoId: number): Promise<void
 }
 
 /**
+ * Vuelve un estado atrás en el ciclo de vida de la fecha: `finalizado` pasa a
+ * `en_curso`, y `en_curso` a `programado`. Solo admin (migración `0015`).
+ *
+ * Es la salida cuando se finalizó una fecha por error: no borra el marcador ni
+ * los puntajes ya cargados. Devuelve el estado anterior y el nuevo.
+ */
+export async function reabrirPartido(
+  token: string,
+  partidoId: number,
+): Promise<{ estado_anterior: string; estado_nuevo: string } | null> {
+  const filas = await rpc<{ estado_anterior: string; estado_nuevo: string }[]>('reabrir_partido', {
+    p_token: token,
+    p_partido_id: partidoId,
+  })
+  return filas?.[0] ?? null
+}
+
+/**
  * Atribuye los goles del partido a cada jugador. `goles_a` / `goles_b` del
  * partido siguen siendo el resultado oficial: los individuales pueden sumar
  * menos, por ejemplo si hubo un gol en contra. Acepta cargas parciales y se

@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0014`.
+Migraciones aplicadas: `0001` … `0015`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -131,6 +131,11 @@ La excepción del resultado es `corregir_resultado` (migración `0014`, **solo a
 el marcador en cualquier estado, para arreglar una fecha ya finalizada. Ojo el orden con
 `guardar_goles`, que recalcula el marcador y se lleva la corrección puesta.
 
+Y va para atrás con `reabrir_partido` (migración `0015`, **solo admin**): un estado por
+llamada, `finalizado` → `en_curso` → `programado`, para una fecha finalizada por error.
+No borra marcador, plantel, goles ni puntajes; mientras esté reabierta, la fecha no acepta
+puntajes nuevos y sale de `estadisticas_jugadores`.
+
 ### Cómo se accede
 
 **Ninguna tabla es accesible desde el cliente.** Todas tienen RLS sin policies. Todo
@@ -149,7 +154,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(89 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(97 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:
