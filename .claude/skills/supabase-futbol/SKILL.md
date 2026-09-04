@@ -42,7 +42,7 @@ Proyecto Supabase: ref `dxrsqqkpwhulkgljuaxj` (`https://dxrsqqkpwhulkgljuaxj.sup
 región us-west-2, Postgres 17. La app usa una **publishable key** (`sb_publishable_…`),
 el formato nuevo que reemplaza a la anon key clásica; el rol efectivo sigue siendo `anon`.
 
-Migraciones aplicadas: `0001` … `0015`.
+Migraciones aplicadas: `0001` … `0016`.
 
 **La base tiene datos reales**: los jugadores del grupo y sus fechas jugadas. No correr
 scripts que borren por conteo o por rango de id.
@@ -118,6 +118,16 @@ porque si no los diez jugadores se llevaban un `mejores` y un `peores` de esa pl
 cuántas fechas fue el jugador y el peor del partido. Se **comparten** en caso de empate al
 tope de la fecha, así que la suma de cada columna puede pasar la cantidad de fechas.
 
+### Exportación a Excel
+
+`exportar_planteles(p_token, p_partido_ids)` (migración `0016`) es `plantel_partido`
+para varias fechas de una: una fila por (fecha, jugador) con marcador, equipo, goles,
+promedio, votos, `mejores` / `peores`, `resultado` y `es_mvp` / `es_wvp`. Con
+`p_partido_ids` en null o vacío trae todas las fechas. Pide solo sesión válida.
+
+La alimenta el panel de exportar de `/partidos`; el `.xlsx` se arma en el navegador
+con `write-excel-file`, la base no genera archivos.
+
 ### Orden de los listados
 
 `listar_jugadores` y `plantel_partido` ordenan **por nombre**, no por apellido — es lo
@@ -154,7 +164,7 @@ tablas no deben ser legibles desde el cliente y las funciones son la API públic
 ### Prueba de regresión
 
 `npm run prueba:e2e` ejerce las funciones con supabase-js contra la base real
-(97 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
+(105 aserciones, incluidos los casos que deben ser rechazados). Al terminar limpia lo
 suyo con `limpiar_datos_prueba`, que solo borra filas con email `%@prueba.local`.
 
 Dos reglas al tocar ese script, porque corre sobre datos reales:

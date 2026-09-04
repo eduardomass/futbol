@@ -569,6 +569,59 @@ try {
     'jugador común editando la grilla',
   )
 
+  // ============ exportación de planteles ============
+  // Una sola llamada trae el plantel de varias fechas: es lo que arma el Excel
+  // de la pantalla de partidos.
+  const exportado = await rpc('exportar_planteles', {
+    p_token: token,
+    p_partido_ids: [partidoId],
+  })
+  ok(exportado.length === 10, `exportar_planteles trae el plantel completo (${exportado.length})`)
+  ok(
+    exportado.every(f => f.partido_id === partidoId),
+    'exportar_planteles no se trae otras fechas cuando se le pasa una',
+  )
+  ok(
+    exportado.every(f => {
+      if (f.goles_a === f.goles_b) return f.resultado === 'empate'
+      const gano = (f.equipo === 'A') === (f.goles_a > f.goles_b)
+      return f.resultado === (gano ? 'ganado' : 'perdido')
+    }),
+    'el resultado de cada fila coincide con el marcador de la fecha',
+  )
+  const mvps = exportado.filter(f => f.es_mvp).map(f => f.jugador_id)
+  const wvps = exportado.filter(f => f.es_wvp).map(f => f.jugador_id)
+  ok(
+    mvps.length === 2 && mvps.includes(todos[0]) && mvps.includes(todos[1]),
+    `el jugador del partido se comparte en caso de empate (${mvps.length})`,
+  )
+  ok(
+    wvps.length === 1 && wvps[0] === todos[9],
+    'el peor del partido sale del mínimo de la planilla',
+  )
+
+  // Sin lista de fechas exporta todo, que es el «Todas» de la pantalla.
+  const todasLasFechas = await rpc('exportar_planteles', { p_token: token, p_partido_ids: null })
+  ok(
+    todasLasFechas.length >= exportado.length &&
+      todasLasFechas.some(f => f.partido_id === partidoId),
+    `sin lista de fechas exporta todas (${todasLasFechas.length} filas)`,
+  )
+
+  // Alcanza con sesión válida: el plantel y los promedios de una fecha ya los
+  // ve cualquiera en la pantalla de la fecha.
+  const exportadoComun = await rpc('exportar_planteles', {
+    p_token: tokenComun,
+    p_partido_ids: [partidoId],
+  })
+  ok(exportadoComun.length === 10, 'un jugador común también puede exportar')
+
+  await debeFallar(
+    'exportar_planteles',
+    { p_token: '00000000-0000-0000-0000-000000000000', p_partido_ids: [partidoId] },
+    'exportar con un token que no existe',
+  )
+
   // ============ permisos de jugadores ============
   // El ABM es solo de admin; cada jugador edita únicamente su propia fila.
   await debeFallar(

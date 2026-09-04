@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import ExportarPartidos from '@/components/ExportarPartidos'
 import ListaFechas from '@/components/ListaFechas'
 import { listarPartidos } from '@/lib/api'
 import type { PartidoResumen, Sesion } from '@/types'
@@ -56,6 +57,8 @@ export default function Partidos({ sesion }: PartidosProps) {
           {error}
         </p>
       )}
+
+      <ExportarPartidos token={sesion.token} partidos={partidos} />
 
       <ListaFechas
         partidos={partidos}

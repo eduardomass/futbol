@@ -102,6 +102,37 @@ export type MiPartido = {
   ya_puntue: boolean
 }
 
+/**
+ * Una fila de la exportación: un jugador en una fecha, con todo lo de esa
+ * fecha repetido al lado para que el Excel se pueda filtrar y pivotear sin
+ * mirar otra hoja. La trae `exportar_planteles` (migración `0016`).
+ */
+export type FilaExportacion = {
+  partido_id: number
+  fecha: string
+  estado: EstadoPartido
+  goles_a: number | null
+  goles_b: number | null
+  /** Promedio de todos los puntajes de la fecha, no solo los de este jugador. */
+  promedio_fecha: number | null
+  jugador_id: number
+  nombre: string
+  apellido: string
+  apodo: string | null
+  equipo: 'A' | 'B'
+  goles: number
+  promedio: number | null
+  votos: number
+  mejores: number
+  peores: number
+  /** Cómo le fue al equipo del jugador. Null si la fecha no está terminada. */
+  resultado: 'ganado' | 'empate' | 'perdido' | null
+  /** Si fue el jugador del partido de esa fecha. Los empates lo comparten. */
+  es_mvp: boolean
+  /** Si fue el peor del partido de esa fecha. */
+  es_wvp: boolean
+}
+
 /** Nombre corto para mostrar: el apodo si tiene, si no el nombre de pila. */
 export function nombreCorto(j: { nombre: string; apodo?: string | null }): string {
   return j.apodo?.trim() || j.nombre

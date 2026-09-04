@@ -3,6 +3,7 @@ import type {
   CeldaPuntaje,
   Estadisticas,
   EstadisticaJugador,
+  FilaExportacion,
   Jugador,
   MiPartido,
   PartidoDetalle,
@@ -273,6 +274,21 @@ export function guardarGoles(
     p_token: token,
     p_partido_id: partidoId,
     p_goles: goles,
+  })
+}
+
+/**
+ * Los planteles de varias fechas de una, para el Excel de la pantalla de
+ * partidos: una fila por (fecha, jugador). Con la lista vacía trae todas las
+ * fechas — mandar 40 ids no cambia el resultado, pero evitarlo sí.
+ */
+export function exportarPlanteles(
+  token: string,
+  partidoIds: number[],
+): Promise<FilaExportacion[]> {
+  return rpc('exportar_planteles', {
+    p_token: token,
+    p_partido_ids: partidoIds.length > 0 ? partidoIds : null,
   })
 }
 

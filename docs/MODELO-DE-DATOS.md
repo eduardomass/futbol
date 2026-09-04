@@ -158,6 +158,7 @@ todas menos `iniciar_sesion` y `proximo_jueves` reciben `p_token uuid` y lo vali
 | `listar_partidos(p_token)` | Todas las fechas con cantidad de jugadores y promedio. |
 | `obtener_partido(p_token, p_partido_id)` | Detalle + `promedio_fecha`, `soy_participante`, `ya_puntue` y `puntajes_cerrados` (true si existe algún partido con fecha posterior). |
 | `plantel_partido(p_token, p_partido_id)` | Los 10 con equipo, promedio, cantidad de votos, `goles`, `mejores` y `peores`. Ordenado por equipo y después **por nombre**. |
+| `exportar_planteles(p_token, p_partido_ids)` | El plantel de **varias** fechas en una sola llamada, para el Excel de `/partidos`: una fila por (fecha, jugador) con marcador, equipo, `goles`, promedio, votos, `mejores`, `peores`, `resultado` (ganado/empate/perdido según el equipo) y `es_mvp` / `es_wvp`. `p_partido_ids` en null o vacío trae todas las fechas. Cualquier sesión válida. |
 | `agregar_jugador_partido(…, p_equipo)` | Solo en `programado`; rechaza el 6º del equipo y los repetidos. |
 | `quitar_jugador_partido(…)` | Solo en `programado`. |
 | `comenzar_partido(…)` | Exige exactamente 5 y 5. |
@@ -241,3 +242,7 @@ El título de una fecha se lo lleva quien llega al tope de `mejores` (o de `peor
 fecha, y **se comparte en caso de empate**: si dos juntaron 4 «mejores» cada uno, los dos
 suman un MVP. Por eso la suma de la columna puede ser mayor que la cantidad de fechas. Una
 fecha donde todas las planillas son planas no reparte ni MVP ni WVP.
+
+`exportar_planteles` (migración `0016`) aplica la misma regla fecha por fecha y la
+devuelve ya resuelta en `es_mvp` / `es_wvp`, para que el Excel de `/partidos` no
+tenga que recalcular el tope en el navegador.

@@ -22,7 +22,7 @@ resultados y puntajes cruzados entre jugadores.
 npm run dev          # servidor de desarrollo en :5173
 npm run build        # tsc -b && vite build  ← correr siempre antes de commitear
 npm run lint         # oxlint
-npm run prueba:e2e   # 97 aserciones contra la base REAL (ver advertencia abajo)
+npm run prueba:e2e   # 105 aserciones contra la base REAL (ver advertencia abajo)
 ```
 
 ## Reglas de arquitectura
@@ -164,9 +164,36 @@ Ojo con `scripts/prueba-e2e.mjs`: su partido de prueba tiene que ser el de fecha
 alta, o el paso de puntajes falla. El script ya lo resuelve mirando `listar_partidos`
 antes de crearlo.
 
+### La exportación a Excel se arma en el navegador
+
+La pantalla `/partidos` tiene un panel para bajarse un `.xlsx` con **cómo fueron los
+equipos en cada fecha**: se eligen qué fechas entran y qué columnas se llevan (goles,
+promedio y votos, destacados, y una hoja resumen con una fila por fecha).
+
+Los datos salen de una sola llamada: `exportar_planteles(p_token, p_partido_ids)`
+(migración `0016`) devuelve una fila por (fecha, jugador) con marcador, equipo, goles,
+promedio, votos, `mejores` / `peores`, el `resultado` del equipo del jugador y
+`es_mvp` / `es_wvp`. Es `plantel_partido` para muchas fechas de una: con la función
+de a una, exportar 40 fechas serían 40 llamadas desde el navegador. Con la lista vacía
+—o en null— trae todas. Pide solo sesión válida, como `plantel_partido`: la planilla
+autor × jugador sigue siendo del admin.
+
+El archivo se arma en el cliente con `write-excel-file` (`src/lib/exportar.ts`), que
+entra con un `import()` dinámico: son ~70 kB que no tienen por qué viajar en el bundle
+de todos los que nunca exportan.
+
+Dos detalles del formato:
+
+- **La fecha va como fecha de Excel**, no como texto, y el `Date` se arma con
+  `Date.UTC`. La librería saca el serial de `getTime()`, así que con un `Date` local
+  la planilla muestra el día anterior en cualquier huso al este de Greenwich.
+- **Los `numeric` de Postgres llegan como string** por PostgREST. Los promedios pasan
+  por `aNumero()` antes de ir a una celda numérica, o Excel los guarda como texto y no
+  se pueden promediar en la planilla.
+
 ### Migraciones
 
-Viven en `supabase/migrations/`, numeradas (`0001_…` … `0015_…`). **Nunca editar una ya
+Viven en `supabase/migrations/`, numeradas (`0001_…` … `0016_…`). **Nunca editar una ya
 aplicada**: crear una nueva. Aplicarlas con la herramienta MCP `apply_migration`.
 
 El SQL debe ser idempotente donde se pueda: `create table if not exists`,
